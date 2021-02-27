@@ -1,0 +1,7 @@
+Cython
+primer3-py
+Flask
+Flask-WTF
+numpy
+pandas
+requests

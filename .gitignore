@@ -1,3 +1,4 @@
-data/*
-.ipynb_checkpoints/*
-networks/*
+research_notebooks/data/*
+research_notebooks/.ipynb_checkpoints/*
+research_notebooks/networks/*
+application/__pycache__/

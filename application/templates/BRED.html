@@ -1,0 +1,149 @@
+<html>
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>BRED</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="jquery-3.4.1.min.js"></script>
+
+    <style>
+        .scroll {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        mark {
+            background-color: yellow;
+            color: black;
+            }
+    </style>
+  </head>
+  <body onload="load();">
+
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+          <a class="nav-link" aria-current="page" href="{{ url_for('home') }}">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" href="{{ url_for('BRED') }}">BRED</a>
+        </li>
+      </ul>
+
+      <br>
+      <br>
+
+        </form>
+        <form action="{{ url_for('BRED') }}" method="post" id = "edit_form">
+            <div class="col col-md-2">
+            {{ edit_form.csrf }}
+            <div class="form-group" >
+              <label for="phage">Phage</label>
+              <input type="text" value = "{{phage}}" class="form-control" id="phage" name="phage" placeholder="Enter phage name">
+            </div>
+            <div class="form-group">
+                <label for="bp_position_lower">Start BP</label>
+                <input type="number" value = "{{bp_position_lower}}" class="form-control" id="bp_position_lower" name="bp_position_lower" placeholder="Start BP">
+            </div>
+            <div class="form-group">
+                <label for="bp_position_upper">Stop BP</label>
+                <input type="number" value = "{{bp_position_upper}}" class="form-control" id="bp_position_upper" name="bp_position_upper" placeholder="Stop BP">
+            </div>
+            <div class="form-group">
+                <label for="gp_number">Gene Product Number</label>
+                <input type="number" value = "{{gp_number}}" class="form-control" id="gp_number" name="gp_number" placeholder="Gene GP">
+            </div>
+            <div class="form-group">
+                <label for="template_DNA">Template DNA</label>
+                <input type="text" value = "{{template_DNA}}" class="form-control" id="template_DNA" name="template_DNA" placeholder="ATGC...">
+            </div>
+            {% if error != "" %}
+            <small style="color:red;">{{error}}</small>
+            <br>
+            {% endif %}
+
+            {% if error == "" and "substrate" in results.keys()%}
+            <form action="{{ url_for('BRED') }}">
+                <input type="submit" class="btn btn-primary" value="New Search" />
+            </form>
+            
+            {% else %} 
+            <button type="submit" class="btn btn-primary">Submit</button>
+            {{ edit_form.csrf_token }}
+            {% endif %}
+        </div>
+          </form>
+</div>
+  </div>
+
+
+{% if "substrate" in results.keys() %}
+    <div class="col-md-8" onload="load();">
+        <h3>
+            {{results["edit type"]}} of
+
+            {% if "function" in results.keys() %}
+                gene <a href="https://phagesdb.org/genes/{{phage}}_CDS_{{results['gene number']}}/" target="_blank"> #{{results["gene number"]}} </a>{{results["function"]}} 
+                [pham <a href = "https://phagesdb.org/phams/{{results['pham']}}/" target="_blank">{{results["pham"]}}</a>] 
+                ({{bp_position_lower}}-{{bp_position_upper}}bp)
+            {% else %} 
+                 region {{bp_position_lower}}-{{bp_position_upper}}bp 
+            {% endif %} 
+        </h3>
+        <b> Substrate </b>
+        <div class="card scroll">
+        {{results["substrate"]}}
+        </div>
+
+        <b> Forward Primer </b>
+        <p>
+            Tm:  &#x2103; <br>
+            Binding Location (unedited DNA): - bps <br>
+            Hairpin Score: <br>
+            Heterodimer Score: <br>
+        </p>
+        <div class="card scroll">
+        </div>
+
+        <b> Reverse Primer </b>
+        <p >
+            Tm:  &#x2103; <br>
+            Binding Location (unedited DNA): - bps <br>
+            Hairpin Score: <br>
+            Heterodimer Score: <br>
+        </p>
+        <div class="card scroll">
+        </div>
+
+        <b> Experiment Primer </b>
+        <p>
+            Melting Temperature:  &#x2103; <br>
+            Binding Location (edited DNA): - bps <br>
+            Hairpin Score: <br>
+            Heterodimer Score: <br>
+        </p>
+        <div class="card scroll">
+        </div>
+
+
+
+        <b> Edited DNA </b>
+        <div class="card scroll" id="edited_DNA">
+        </div>
+            
+    </div>
+
+{% endif %} 
+</body>
+<script> 
+    function load(){
+        var results = {{results|tojson}};
+        var edited_DNA = results["edited DNA"];
+        document.getElementById("edited_DNA").innerHTML = edited_DNA ;//results["edited DNA"][:3] + "<span class=\"highlight\">" + results["edited DNA"][:5] + "</span>" + results["edited DNA"][5:];
+    }
+</script>
+
+</html>
