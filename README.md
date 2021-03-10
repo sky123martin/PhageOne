@@ -23,6 +23,8 @@
 
     ```unix
     pip3 install -r requirements.txt
+    pip3 install Cython
+    pip3 install primer3-py
     ```
 
 5. Run Application
