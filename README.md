@@ -1,4 +1,4 @@
-# Phage_Genome_Organization
+# PhageOne
 
 1. Install pip (package manager)
 
