@@ -5,3 +5,5 @@ Flask-WTF
 numpy
 pandas
 requests
+pytest==5.4.1
+gunicorn==19.9.0

@@ -3,7 +3,8 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>BRED</title>
+    <title>PhageOne: BRED Assistant</title>
+    <link rel="icon" href="../static/PhageOneLogo.jpg">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
@@ -15,21 +16,24 @@
             max-height: 200px;
             overflow-y: auto;
         }
-        mark {
-            background-color: yellow;
-            color: black;
-            }
     </style>
   </head>
   <body onload="load();">
 
     <ul class="nav nav-tabs">
         <li class="nav-item">
-          <a class="nav-link" aria-current="PhageOne" href="{{ url_for('home') }}">Home</a>
+          <a class="nav-link" href="{{ url_for('home') }}">PhageOne</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link active" href="{{ url_for('BRED') }}">BRED Assistant</a>
+          <a class="nav-link" href="{{ url_for('EditingGuide') }}">Editing Guides</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="{{ url_for('BRED') }}">BRED Assistant</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('GenomeRoadmaps') }}">Genome Roadmaps</a>
+        </li>
+
       </ul>
 
       <br>

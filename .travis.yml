@@ -1,0 +1,7 @@
+os:
+  - osx
+
+language: python
+
+script:
+  - pytest -v test.py

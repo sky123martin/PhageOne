@@ -20,3 +20,8 @@ class BRED_edit_form(FlaskForm):
     location_type = StringField ('location_type', validators=(Optional(),))
     # submit
     submit = SubmitField('Generate BRED Substrates')
+
+class editing_guide_form(FlaskForm):
+    phage = StringField ('phage', validators=[DataRequired()])
+
+    # TODO allow for editing guides in terms of certain subsets of phages ie clusters or morphotype

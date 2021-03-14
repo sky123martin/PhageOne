@@ -2,16 +2,18 @@ from __future__ import print_function
 from application import app
 
 from flask import Flask, render_template, flash, request, redirect, session
-from application.forms import BRED_edit_form
+from application.forms import BRED_edit_form, editing_guide_form
 from application.utility import *
 import pandas as pd 
 import numpy as np 
 import random
 import sys
 import math
+import os
 import json
 
 from application import utility
+
 
 @app.route('/', methods=['GET', 'POST'])
 def home(error = ""):
@@ -128,3 +130,15 @@ def BRED(error = ""):
         return render_template("BRED.html", results = results, primer = primer, phage = phage, bp_position_start = bp_position_start, bp_position_stop = bp_position_stop, gp_number = "", template_DNA = template_DNA, error = error, edit_form = edit_form, colors = colors)
         
     return render_template("BRED.html", results = results, primer = {}, phage = phage, bp_position_start = bp_position_start, bp_position_stop = bp_position_stop, gp_number = gp_number, template_DNA = template_DNA, error = error, edit_form = edit_form, colors = colors)
+
+
+@app.route('/EditingGuide', methods=['GET', 'POST'])
+def EditingGuide(error = ""):
+    form = editing_guide_form()
+    return render_template("EditingGuide.html", error=error)
+
+@app.route('/GenomeRoadmaps', methods=['GET', 'POST'])
+def GenomeRoadmaps(error = ""):
+        print(error)
+        return render_template("GenomeRoadmaps.html", error=error)
+

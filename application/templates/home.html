@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>PhageOne</title>
+    <link rel="icon" href="../static/PhageOneLogo.jpg">
+
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
@@ -19,21 +21,29 @@
           <a class="nav-link active" aria-current="page" href="{{ url_for('home') }}">PhageOne</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#">Editing Guides</a>
+          <a class="nav-link" href="{{ url_for('EditingGuide') }}">Editing Guides</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('BRED') }}">BRED Assistant</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#">Genome Roadmaps</a>
+          <a class="nav-link" href="{{ url_for('GenomeRoadmaps') }}">Genome Roadmaps</a>
         </li>
 
       </ul>
-      <div class="col-sm-9">
-      <h2>PhageOne: Phage Schematics and Engineering Tools</h2>
-      This tool's two main faucets are to assist biologists in engineering phage genomes and to act as a browser for users to gain a better understanding of phage genome organization.
+      <br>
+      <br>
+      
+        <div class="row">
+          <div class="col-auto"><div class="col-1"><img  src="../static/PhageOneLogo.jpg" style="width:120px;border:1px solid black;" alt="PhageOne Logo"></div>
+          <div class="col-8"><h2>PhageOne: Phage Schematics and Engineering Tools</h2>
+            This tool's two main faucets are to assist biologists in engineering phage genomes and to act as a browser for users to gain a better understanding of phage genome organization.
+          </div>
+        </div>
+        
+    </div>
 
-
+    <div class="col-sm-12">
       <hr class="solid">
       <h3>Tools</h3>
       <h4>Editing Guides</h4>
@@ -48,12 +58,18 @@
 
       <hr class="solid">
       <h3>Downloads</h3>
-      App code accesible and commeneted research notebooks avaliable at <a href="https://github.com/sky123martin/Phage_Genome_Organization"> https://github.com/sky123martin/Phage_Genome_Organization</a>>
+      Application code accessible and commented research notebooks available at <a href="https://github.com/sky123martin/PhageOne"> https://github.com/sky123martin/PhageOne</a>
 
       <hr class="solid">
       <h3>Authors and Contributors</h3>
-
+      Skylar Martin <br>
+      Dreycey Albin <br>
+      Dr. Aaron Clauset <br>
+      Dr. Mirela Alistar <br>
+      <hr class="solid">
+      For technical issues, bug reports, and code contributions, please use the github or email Skylar.Martin@colorado.edu
     </div>
+  </div>
 </body>
 <script> 
 
