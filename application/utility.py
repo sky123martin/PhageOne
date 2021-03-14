@@ -1,8 +1,6 @@
 from flask import session
 from application import app
 import sys
-from bs4 import BeautifulSoup as bs
-from contextlib import contextmanager
 import pickle
 import primer3
 import pandas as pd
