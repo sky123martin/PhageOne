@@ -9,9 +9,7 @@ from flask_bootstrap import Bootstrap
 
 bootstrap = Bootstrap(app)
 
-# print("LETS get")
 # if not (os.path.isfile("data/phage_metadata.csv") and os.path.isfile("data/cleaned_gene_list.csv")):
-#     print("RIIIIPIN")
 #     download_phage_info()
 
 proc = subprocess.check_call("mkdir -p data", shell=True)

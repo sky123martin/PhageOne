@@ -15,8 +15,8 @@ import json
 from application import utility
 
 
-@app.route('/', methods=['GET', 'POST'])
-def home(error = ""):
+@app.route('/')
+def home():
     return render_template("home.html")
 
 @app.route('/BRED', methods=['GET', 'POST'])
