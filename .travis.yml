@@ -1,5 +1,7 @@
 os:
   - osx
+  
+dist: xenial
 
 language: python
 
