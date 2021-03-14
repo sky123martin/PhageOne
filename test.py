@@ -7,6 +7,7 @@ from random import choice
 
 class BRED(unittest.TestCase):
     def test_download_phage_fasta(self):
+        download_phage_fasta("D29")
         pass
 
     def test_fasta_to_DNA(self):
