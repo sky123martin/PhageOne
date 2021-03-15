@@ -26,7 +26,7 @@ def setup_data():
 
 @app.after_request
 def after_request_cleaning(response):
-    print("after_request executing!")
+    print("after_request executing!", print(response))
     return response
 
 @app.route('/')

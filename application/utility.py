@@ -191,16 +191,16 @@ def collect_gene_info(phage, gp_num):
         genes_df = pd.read_csv(file_path)
 
     # extract gene info
-    target_gene_df = genes_df[genes_df["Name"] == str(gp_num)]
+    target_gene_df = genes_df[genes_df["gene number"] == gp_num]
 
     # is gene number is not in list 
     if target_gene_df.shape[0] == 0:
         return genes_df.shape[0]
 
-    start_bp = int(target_gene_df["Start"].iloc[0])
-    stop_bp = int(target_gene_df["Stop"].iloc[0])
-    function = target_gene_df["Notes"].iloc[0]
-    pham = target_gene_df["phams"].iloc[0][0]
+    start_bp = int(target_gene_df["start"].iloc[0])
+    stop_bp = int(target_gene_df["stop"].iloc[0])
+    function = str(target_gene_df["function"].iloc[0])
+    pham = str(target_gene_df["pham"].iloc[0])
     
     return start_bp, stop_bp, pham, function
 

@@ -7,10 +7,6 @@
     <link rel="icon" href="../static/PhageOneLogo.jpg">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-
     <style>
         .scroll {
             max-height: 200px;
@@ -65,19 +61,19 @@
             </div>
             <div class="form-group" id="form_bp_position_start">
                 <label for="bp_position_start" id = "bp_position_start_placeholder">Start Base Pair</label>
-                <input type="number" value = "{{bp_position_start}}" class="form-control" id="bp_position_start" name="bp_position_start" placeholder="">
+                <input type="number" value = "" class="form-control" id="bp_position_start" name="bp_position_start" placeholder="">
             </div>
             <div class="form-group" id="form_bp_position_stop">
                 <label for="bp_position_stop">Stop Base Pair</label>
-                <input type="number" value = "{{bp_position_stop}}" class="form-control" id="bp_position_stop" name="bp_position_stop" placeholder="">
+                <input type="number" value = "" class="form-control" id="bp_position_stop" name="bp_position_stop" placeholder="">
             </div>
             <div class="form-group" id="form_gp">
                 <label for="gp_number">Gene Product Number</label>
-                <input type="number" value = "{{gp_number}}" class="form-control" id="gp_number" name="gp_number" placeholder="">
+                <input type="number" value = "" class="form-control" id="gp_number" name="gp_number" placeholder="">
             </div>
             <div class="form-group", id="form_DNA_template">
                 <label for="template_DNA">Template Sequence</label>
-                <input type="text" value = "{{template_DNA}}" class="form-control" id="template_DNA" name="template_DNA" placeholder="ATGC...">
+                <input type="text" value = "" class="form-control" id="template_DNA" name="template_DNA" placeholder="ATGC...">
             </div>
             {% if error != "" %}
             <small style="color:red;">{{error}}</small>
@@ -547,6 +543,9 @@
     </div>
 
 {% endif %} 
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 </body>
 <script> 
     function load(){
