@@ -14,6 +14,20 @@ import json
 
 from application import utility
 
+@app.before_first_request
+def setup_data():
+    # make data directory
+    proc = subprocess.check_call("mkdir -p data", shell=True)
+
+    # download phagesDB info
+    download_phage_metadata()
+    download_all_phage_genes()
+    download_all_fastas()
+
+@app.after_request
+def after_request_cleaning(response):
+    print("after_request executing!")
+    return response
 
 @app.route('/')
 def home():
@@ -21,6 +35,10 @@ def home():
 
 @app.route('/BRED', methods=['GET', 'POST'])
 def BRED(error = ""):
+
+    # <h3>Subcluster: <a href="https://phagesdb.org/subclusters/{{phage_info['subcluster']}}/">{{phage_info['subcluster']}}</a></h3>
+    # <h3>Cluster: <a href="https://phagesdb.org/clusters/{{phage_info['cluster']}}/">{{phage_info['subcluster']}}</a></h3>
+    # <h3>Cluster Lifecycle: <a href="https://phagesdb.org/glossary/#{{phage_info['Cluster Life']}}/">{{phage_info['subcluster']}}</a></h3>
     # initialize forms
     edit_form = BRED_edit_form()
 
@@ -104,8 +122,6 @@ def BRED(error = ""):
             return render_template("BRED.html", results = results, primer = {}, phage = phage, bp_position_start = bp_position_start, bp_position_stop = bp_position_stop, gp_number = gp_number, template_DNA = template_DNA, error = error, edit_form = edit_form, colors = colors)
 
         # retrieve phage DNA
-        download_phage_fasta(phage)
-
         DNA = fasta_to_DNA(phage)
 
         # find substrate and edit DNA sequence
@@ -137,8 +153,8 @@ def EditingGuide(error = ""):
     form = editing_guide_form()
     return render_template("EditingGuide.html", error=error)
 
-@app.route('/GenomeRoadmaps', methods=['GET', 'POST'])
-def GenomeRoadmaps(error = ""):
+@app.route('/GenomeSynteny', methods=['GET', 'POST'])
+def GenomeSynteny(error = ""):
         print(error)
-        return render_template("GenomeRoadmaps.html", error=error)
+        return render_template("GenomeSynteny.html", error=error)
 

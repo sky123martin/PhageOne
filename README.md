@@ -1,4 +1,5 @@
 # PhageOne
+![alt text](https://travis-ci.com/sky123martin/PhageOne.svg?branch=main)
 
 1. Install pip (package manager)
 

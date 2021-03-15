@@ -31,7 +31,7 @@
           <a class="nav-link active" aria-current="page" href="{{ url_for('BRED') }}">BRED Assistant</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('GenomeRoadmaps') }}">Genome Roadmaps</a>
+          <a class="nav-link" href="{{ url_for('GenomeSynteny') }}">Genome Synteny</a>
         </li>
 
       </ul>
@@ -100,18 +100,26 @@
 
 
 {% if "substrate" in results.keys() %}
-<h3>
-    {{results["edit type"]}} of
-
-    {% if "function" in results.keys() %}
-        gene <a href="https://phagesdb.org/genes/{{phage}}_CDS_{{results['gene number']}}/" target="_blank"> #{{results["gene number"]}} </a>{{results["function"]}} 
-        [pham <a href = "https://phagesdb.org/phams/{{results['pham']}}/" target="_blank">{{results["pham"]}}</a>] 
-        ({{bp_position_start}}-{{bp_position_stop}}bp)
-    {% else %} 
-         region {{bp_position_start}}-{{bp_position_stop}}bp 
-    {% endif %} 
-</h3>
-    <div class="col-md-8" onload="load();">
+<div class="row">
+    <div class="column">
+        <img src="https://phagesdb.org/media/emPics/{{phage}}_EM_Thumb.jpg"  onerror=this.onerror=null;this.src='https://phagesdb.org/media/plaquePics/{{phage}}_Plaque.png';" alt="{{phage}} Picture" title="{{phage}} Picture" width="200px" height="200px">
+    </div>
+    <div class="column" style="column-width: 10px;"></div>
+    <div class="column">
+        <h3>Phage: <a href="https://phagesdb.org/phages/{{phage}}/">{{phage}}</a></h3>
+        <h3>
+            Edit: {{results["edit type"]}} of
+            
+            {% if "function" in results.keys() %}
+                gene <a href="https://phagesdb.org/genes/{{phage}}_CDS_{{results['gene number']}}/" target="_blank"> #{{results["gene number"]}} </a>{{results["function"]}} 
+                [pham <a href = "https://phagesdb.org/phams/{{results['pham']}}/" target="_blank">{{results["pham"]}}</a>, site {{bp_position_start}}-{{bp_position_stop}}bp]
+            {% else %} 
+                region {{bp_position_start}}-{{bp_position_stop}}bp
+            {% endif %} 
+        </h3>
+    </div>
+</div>
+<div class="col-md-8" onload="load();">
 
 {% if results["edit type"] == "replacement" %}
 <h4><a href="#original-DNA">DNA</a></h4>

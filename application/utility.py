@@ -12,210 +12,173 @@ import math
 import re
 import requests 
 import os.path
+import multiprocessing 
+from multiprocessing.pool import Pool
 from os import path
 
-# define Python user-defined exceptions
-class Error(Exception):
-    """Base class for other exceptions"""
-    pass
+#################################
+#### DOWNLOAD PHAGESDB DATA #####
+#################################
+def download_all_fastas():
+    """Download all fasta from phagesDB"""
+    if not path.isfile("data/fasta_files/ZygoTaiga.fasta"):
+        proc = subprocess.check_call("mkdir -p data/fasta_files", shell=True)
 
+        url = "https://phagesdb.org/media/Actinobacteriophages-All.fasta"
+        r = requests.get(url, allow_redirects=True)
 
-class PrimerNotFound(Error):
-    """Raised when primer is not found in DNA sequence"""
-    pass
+        if r.status_code == 404:
+            return "unable to find multifasta"
 
-class GeneNotFound(Error):
-    """Raised when gene is unable to be found in phagesdb"""
-    pass
+        # split fasta
+        phage_fastas = str(r.content).split(">")
 
-class PhageNotFound(Error):
-    """Raised when phage is unable to be found in phagesdb"""
-    pass
+        # iterate through and download
+        for fasta in phage_fastas:
+            fasta = ">" + fasta
+            if len(fasta)>1000:
+                    phage_name = str(fasta).split('\\n',1)[0].split(" ")[2].replace(",", "")
+                    f = open('data/fasta_files/{}.fasta'.format(phage_name), 'w')
+                    f.writelines(fasta.replace("\\n"," \n"))
+                    f.close()
 
-##############################
-#### SETUP PHAGE INFO #####
-##############################
-def collect_phage_metadata(phage_info):
-    (phage, phage_from_geneid) = phage_info
-    query_url = "https://phagesdb.org/api/phages/"+ str(phage)
-    response = requests.get(url = query_url).json()
+def download_phage_metadata():
+    """Download sequenced phage metadata from phagesDB"""
+    url = "https://phagesdb.org/data/?set=seq&type=full"
+
+    r = requests.get(url, allow_redirects=True)
+
+    if r.status_code == 404:
+        return "unable to find multifasta"
     
-    if len(response.keys()) < 5:
-        query_url = "https://phagesdb.org/api/phages/"+ str(phage.split("_")[0]) #sometimes they are drafts
-        response = requests.get(url = query_url).json()
-        
-    if len(response.keys()) < 5:
-        query_url = "https://phagesdb.org/api/phages/"+ str(phage_from_geneid) #sometimes they are drafts
-        response = requests.get(url = query_url).json()
-        
-    if len(response.keys())>5:
-        return [
-                response['phage_name'],
-                response["pcluster"]["temperate"]  if "pcluster" in response.keys() and response["pcluster"]  != None else "",
-                response["pcluster"]["cluster"] if "pcluster" in response.keys() and response["pcluster"] != None else response["pcluster"],
-                response["psubcluster"]["subcluster"] if "psubcluster" in response.keys() and response["psubcluster"] != None else response["psubcluster"],
-                response["morphotype"],
-                response["isolation_host"]["genus"],
-                response["isolation_host"]["species"],
-                response["genome_length"],
-                response['is_annotated'],
-                response['is_phamerated'],
-                response["gcpercent"]
-               ]
-    else:
-        return [phage, "-1"]
+    lines = str(r.content).split("\\n")
+    lines = [l.split("\\t") for l in lines]
+    df = pd.DataFrame(columns = lines[0], data = lines[1:])
+
+    # rename to fit with research code
+    df.rename(columns={'b\'Phage Name':'phage',
+                        'Temperate?':'temperate',
+                        'Cluster':'cluster',
+                        'Subcluster':'subcluster',
+                        'Morphotype':'morphotype',
+                        'Host':'host',
+                        'Genome Length(bp)':'genome length',
+                        'GC%':'gcpercent',
+                        'Phamerated?':'is phamerated',
+                        'Annotation Status':'is annotated'
+                       }, inplace = True)
     
-def download_page(page_number):
-    ''' 
-    Download page number from https://phagesdb.org/api/genes/?page= given global param
-    '''
-    query_url = "https://phagesdb.org/api/genes/?page=" + str(page_number) + "&page_size=" + str(page_size)
+    # only retrieve specific columns
+    df = df[['phage','temperate','cluster','subcluster','morphotype','host','genome length','is annotated','is phamerated','gcpercent']]
+   
+    # set types
+    df = df.astype({'phage':'str',
+                'temperate':'bool',
+                'cluster':'str',
+                'subcluster':'str',
+                'morphotype':'str',
+                'host':'str',
+                'genome length':'float',
+                'is annotated':'bool',
+                'is phamerated':'bool',
+                'gcpercent':'float'})
 
-    response = requests.get(url = query_url).json()
-    list_of_genes = []
-    for gene in response["results"]:
-        info = gene["GeneID"].split("_")
-        list_of_genes.append([gene["GeneID"],
-                              gene["phams"][0],
-                              gene["Notes"].lower(),
-                              gene["translation"],
-                              gene["Orientation"],
-                              gene["PhageID"]["Name"] if "PhageID" in gene.keys() and "Name" in gene["PhageID"].keys() else gene["GeneID"].split("_")[0],
-                              gene["GeneID"].split("_")[-1],
-                              gene["Start"],
-                              gene["Stop"]
-                             ])
-    return list_of_genes
+    # export to csv
+    df.to_csv("data/phage_metadata.csv")
 
-def download_phage_info():
-    # define size of pages globally so it can be used in above function
-    global page_size
-    page_size = 1000
+def download_phage_genes(phage):
+    query_url = "https://phagesdb.org/api/genesbyphage/{}/".format(phage)
 
-    # if page size is 1 then the number of pages is equal to total number of genes
-    query_url = "https://phagesdb.org/api/genes/?page=1&page_size=" + str(page_size)
-    total_num_genes = int(requests.get(url = query_url).json()["count"])
+    try:
+        response = requests.get(url = query_url).json()['results']
+        df = pd.DataFrame(response)
 
-    # determine number of pages based on page size
-    pages = int(np.ceil(total_num_genes/page_size))
+        a_file = open("static_data/conversion_table.pkl", "rb")
+        conversion_table = pickle.load(a_file)
+        df["phage"] = df["PhageID"].apply(lambda x: x['PhageID'])
+        df["gene number"] = df['GeneID'].apply(lambda x: x.split("_")[-1])
+        df["pham"] = df['phams'].apply(lambda x: x[0])
+        df["Notes"] = df["Notes"].apply(lambda x: str(x).lower()[2:-1])
+        df["function"] = df["Notes"].apply(lambda x: conversion_table[x] if x in conversion_table.keys() else "NKF")
 
-    # use multiproccesing to query and proccess each page in paralel
-    with Pool(multiprocessing.cpu_count()) as p:
-        genes = p.map(download_page, list(range(1,pages+1)))
+        df.rename(columns={'GeneID':'gene ID',
+                            'translation':'translation',
+                            'Orientation':'orientation',
+                            'Start':'start',
+                            'Stop':'stop',
+                            'Notes':'uncleaned function'
+                            }, inplace = True)
+                            
+        df = df[['gene ID','pham','function','translation','orientation','phage','gene number','start','stop','uncleaned function']]
+        df.to_csv("data/genes_by_phage/{}_genes.csv".format(phage))
+        print(phage)
+        return df
+    except: # if phage has no genes df then edit the metadata csv and return empty DF
+        phage_df = pd.read_csv("data/phage_metadata.csv")
+        phage_df[phage_df["phage"]!=phage].to_csv("data/phage_metadata.csv")
+        return pd.DataFrame(columns=['gene ID','pham','function','translation','orientation','phage','gene number','start','stop','uncleaned function'])
 
-    combined_genes = [gene for genes_groups in genes for gene in genes_groups]
+def download_all_phage_genes():
+    """Download list of phage genes for each phage that is sequenced in phagesDB"""
 
-    print("Finished download... Found ", len(combined_genes),"genes")
+    if not path.isfile("data/cleaned_gene_list.csv"):
 
-    # ADDED 09/28 TO DISAMBIGUATE FUNCTIONS
-    # Open conversion dict
-    a_file = open("data/conversion_table.pkl", "rb")
-    conversion_table = pickle.load(a_file)
+        meta_file_path = "data/phage_metadata.csv"
+        if not path.isfile(meta_file_path):
+            download_phage_metadata()
+        phage_df = pd.read_csv(file_path)
+        phages = phage_df["phage"].unique()
 
-    # load in approved functions list (taken from https://seaphages.org/blog/2017/10/30/official-function-list/ version 5/2020)
-    df_approved_functions = pd.read_csv("data/Approved_Functions.csv")
-    df_approved_functions = df_approved_functions.dropna(subset=["Approved Function"])
-    df_approved_functions.head()
+        proc = subprocess.check_call("mkdir -p data/genes_by_phage", shell=True)
 
-    # clean approved functions to lower case
-    approved_functions = list(df_approved_functions["Approved Function"])
-    approved_functions = [i.lower() for i in approved_functions]
+        with Pool(multiprocessing.cpu_count()-2) as p:  # to check multiprocessing.cpu_count()
+            output_dfs = p.map(download_phage_genes, phages)
 
-    # for each gene check if it's function is valid, if not use conversion list to correct or NKF
-    for i in combined_genes:
-        function = i[2] # uncleaned function
-        i.append(function) # save uncleaned function
-        if function in approved_functions:
-            continue
-        elif function in conversion_table.keys() and conversion_table[function] != -1:
-            i[2] = conversion_table[function]
-        else: 
-            i[2] = "NKF"
+        all_phages_genes_df = pd.concat(output_dfs)
+        all_phages_genes_df.to_csv("data/cleaned_gene_list.csv")
 
-    df_genes = pd.DataFrame( combined_genes, columns = ['gene ID',
-                                                    'pham',
-                                                    'function',
-                                                    'translation',
-                                                    'orientation',
-                                                    'phage',
-                                                    'gene number',
-                                                    'start',
-                                                    'stop',
-                                                    'uncleaned function'
-                                                   ]) 
-    phages_from_genes = []
-    for phage in df_genes['phage'].unique():
-        phages_from_genes.append((phage, list(df_genes[df_genes['phage']==phage]["gene ID"].values)[0].split("_")[0]))
+def download_phage_fasta(phage):
+    """ Download phage fasta from phagesDB """
+    url = "https://phagesdb.org/media/fastas/{}.fasta".format(phage)
+    r = requests.get(url, allow_redirects=True)
+    if r.status_code == 404:
+        return "unable to find phage"
+    open('data/fasta_files/{}.fasta'.format(phage), 'wb').write(r.content)
+    return ""
 
-    with Pool(multiprocessing.cpu_count()-1) as p:
-        phage_metadata = p.map(collect_phage_metadata, phages_from_genes)
+def fasta_to_DNA(phage):
+    """ Extract DNA into string form from a fasta file """
+    file_path = 'data/fasta_files/{}.fasta'.format(phage)
 
-    temp = phage_metadata
-    for i in temp:
-        if i[1] == "-1":
-            print(i)
-            phage_metadata.remove(i)
-            df_genes = df_genes[df_genes["phage"]!=i[0]]
+    if not path.isfile(file_path):
+        out = download_phage_fasta(phage)
+        if len(out) > 0:
+            return out
 
-    print("Unique # Sequenced Phages:", len(phage_metadata))
+    f = open(file_path, "r")
+    DNA = ''.join(f.read().split("\n")[1:]).replace(" ","")
+    return DNA
 
-    df_phage = pd.DataFrame(phage_metadata, columns =['phage',
-                                                  'temperate',
-                                                  'cluster',
-                                                  'subcluster',
-                                                  'morphotype',
-                                                  'host genus',
-                                                  'host species',
-                                                  'genome length',
-                                                  'is annotated',
-                                                  'is phamerated', 
-                                                  'gcpercent'
-                                               ]) 
 
-    df_genes.to_csv("data/cleaned_gene_list.csv",index=False)
-    df_phage.to_csv("data/phage_metadata.csv",index=False)
+
+####################################
+#### Generate Synteny Networks #####
+####################################
+
 
 
 ##############################
 #### BRED ASSISTANT CODE #####
 ##############################
 
-
-def download_phage_fasta(phage):
-    """ Download phage fasta from phagesDB """
-    file_path = 'data/fasta_files/{}'.format(phage)
-    # download file if file is not in directory
-    if not path.isfile(file_path):
-        url = "https://phagesdb.org/media/fastas/{}.fasta".format(phage)
-        r = requests.get(url, allow_redirects=True)
-        if r.status_code == 404:
-            return "unable to find phage"
-        open('data/fasta_files/{}'.format(phage), 'wb').write(r.content)
-        return ""
-
-def fasta_to_DNA(phage):
-    """ Extract DNA into string form from a fasta file """
-    file_path = 'data/fasta_files/{}'.format(phage)
-    f = open(file_path, "r")
-    DNA = ''.join(f.read().split("\n")[1:])
-    return DNA
-
 def collect_gene_info(phage, gp_num):
     """ Collect gene info using phagesdb API """
-    file_path = "data/genes_by_phage/{}.csv".format(phage)
+    file_path = "data/genes_by_phage/{}_genes.csv".format(phage)
 
-    if path.isfile(file_path):
-        # if file is in directory do not query API
-        genes_df = pd.read_csv(file_path)
+    if not path.isfile(file_path):
+        genes_df = download_phage_genes(phage)
     else:
-        # if file is not in directory query API and save
-        query_url = "https://phagesdb.org/api/genesbyphage/{}/".format(phage)
-        out = requests.get(url = query_url).json()["results"]
-        if out == {}: # phage not found
-            return genes_df.shape[0]
-        genes_df = pd.DataFrame(out)
-
-        genes_df.to_csv()
+        genes_df = pd.read_csv(file_path)
 
     # extract gene info
     target_gene_df = genes_df[genes_df["Name"] == str(gp_num)]
@@ -420,6 +383,7 @@ def find_possible_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, 
     
     possible_primers = pd.concat([f_df, r_df, c_df, e_df])
 
+    possible_primers.drop_duplicates(subset=None, keep=False, inplace=True)
     # check for duplicate strands
     if not possible_primers["primer_seq"].is_unique:
         raise TypeError

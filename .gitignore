@@ -2,10 +2,7 @@ research_notebooks/data/*
 research_notebooks/.ipynb_checkpoints/*
 research_notebooks/networks/*
 application/__pycache__/
-data/fasta_files/* 
-data/genes_by_phage/*
-data/cleaned_gene_list.csv
-data/phage_metadata.csv
+data/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

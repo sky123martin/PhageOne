@@ -3,22 +3,31 @@ import pandas as pd
 import unittest
 import requests
 import random
+import subprocess
+import string
 from random import choice
 
 class BRED(unittest.TestCase):
-    def test_download_phage_fasta(self):
-        download_phage_fasta("D29")
+    def setUp(self):
+        #proc = subprocess.check_call("rm -R data")
+        pass
+
+    def tearDown(self):
+        #proc = subprocess.check_call("rm -R data")
         pass
 
     def test_fasta_to_DNA(self):
         DNA = fasta_to_DNA("D29")
-        pass
 
-    def test_collect_gene_info(self):
-        pass
+    def test_download_phage_fasta(self):
+        download_phage_fasta("D29")
 
-    def test_find_primers(self):
-        pass
+        out = download_phage_fasta("not a real phage name")
+        self.assertEqual(out, "unable to find phage")
+
+    def test_download_phage_genes(self):
+        df = download_phage_genes("D29")
+        self.assertEqual(df["gene number"].count(), 77)
 
     def test_find_amplicon(self):
         amplicon = find_amplicon("ATGGAGGGGCGATG", "TGG", "ATC")
