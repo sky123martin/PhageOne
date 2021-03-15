@@ -10,7 +10,8 @@ from random import choice
 class BRED(unittest.TestCase):
     def setUp(self):
         #proc = subprocess.check_call("rm -R data")
-        pass
+        proc = subprocess.check_call("mkdir -p data/genes_by_phage", shell=True)
+        proc = subprocess.check_call("mkdir -p data/fasta_files", shell=True)
 
     def tearDown(self):
         #proc = subprocess.check_call("rm -R data")

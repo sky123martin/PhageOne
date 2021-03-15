@@ -16,6 +16,16 @@ import multiprocessing
 from multiprocessing.pool import Pool
 from os import path
 
+# define Python user-defined exceptions
+class Error(Exception):
+    """Base class for other exceptions"""
+    pass
+
+
+class PrimerNotFound(Error):
+    """Raised when primer set is unable to be found"""
+    pass
+
 #################################
 #### DOWNLOAD PHAGESDB DATA #####
 #################################
