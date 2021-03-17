@@ -19,6 +19,7 @@ def setup_data():
     # make data directory
     proc = subprocess.check_call("mkdir -p data", shell=True)
     proc = subprocess.check_call("mkdir -p data/fasta_files", shell=True)
+    proc = subprocess.check_call("mkdir -p data/genes_by_phage", shell=True)
     proc = subprocess.check_call("mkdir -p output", shell=True)
 
     # download phagesDB info
@@ -75,7 +76,7 @@ def BRED(error = ""):
         template_DNA = edit_form.template_DNA.data
         orientation = edit_form.orientation.data
 
-        if edit_form.EGFP.data!= None and edit_form.EGFP.data:
+        if edit_form.EGFP.data != None and edit_form.EGFP.data:
             template_DNA = eGFP_DNA()
 
         if edit_type == "insertion":
@@ -92,8 +93,6 @@ def BRED(error = ""):
         elif location_type == "gene product number":
             if gp_number == None:
                 error = "missing gene product number"
-            
-
         
         if edit_type != "deletion" and template_DNA=="":
             error = "Empty template DNA input"
@@ -123,7 +122,8 @@ def BRED(error = ""):
                 results["function"] = function[2:-1]
                 results["gene number"] = gp_number
                 results["region orientation"] = orientation
-
+                print(bp_position_start, bp_position_stop)
+        print(bp_position_start, bp_position_stop)
         bp_position_start = int(bp_position_start)
         bp_position_stop = int(bp_position_stop)
 
