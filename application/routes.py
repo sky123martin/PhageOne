@@ -18,6 +18,7 @@ from application import utility
 def setup_data():
     # make data directory
     proc = subprocess.check_call("mkdir -p data", shell=True)
+    proc = subprocess.check_call("mkdir -p data/fasta_files", shell=True)
     proc = subprocess.check_call("mkdir -p output", shell=True)
 
     # download phagesDB info
@@ -108,14 +109,13 @@ def BRED(error = ""):
         # if gene product is used to location convert to bps
         if location_type == "gene product number":
             out = collect_gene_info(phage, gp_number)
-
             if isinstance(out, str): # if phage is not in DB 
-                error = "Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage)
+                    BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
             elif isinstance(out, int): # if geneproducts is out of bounds
                 if out < gp_number:
-                    error = "Gene product {} is out of bounds, {} has a total of {} genes".format(gp_number, phage, out)
+                    BRED("Gene product {} is out of bounds, {} has a total of {} genes".format(gp_number, phage, out))
                 else:
-                    error = "Gene product {} is not a valid gene product (could be labeled as mRNA)".format(gp_number) 
+                    BRED("Gene product {} is not a valid gene product (could be labeled as mRNA)".format(gp_number))
             else:
                 # if gene is found unpack object
                 bp_position_start, bp_position_stop, pham, function, orientation = out
