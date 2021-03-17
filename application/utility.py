@@ -25,6 +25,27 @@ class Error(Exception):
 class PrimerNotFound(Error):
     """Raised when primer set is unable to be found"""
     pass
+ 
+def BRED_to_fasta(ID, phage, edit_type, substrate, primer):
+    f = open('output/{}_{}_{}.fasta'.format(phage, edit_type, ID), 'w')
+
+    f.writelines(["> substrate \n",
+                substrate,
+                "\n\n",
+                "> forward primer, tm:{}C, primer3 heterodimer:{} deltaG, primer3 hairpin:{} deltaG \n".format(primer["tm f"], primer["hetero f dg"], primer["hairpin f"]),
+                primer["primer f"],
+                "\n\n",
+                "> reverse primer, tm:{}C, primer3 hairpin:{} deltaG \n".format(primer["tm r"], primer["hairpin r"]),
+                primer["primer r"],
+                "\n\n",
+                "> control primer, tm:{}C, primer3 heterodimer:{} deltaG, primer3 hairpin score:{} deltaG \n".format(primer["tm c"], primer["hetero c dg"], primer["hairpin c"]),
+                primer["primer c"],
+                "\n\n",
+                "> experiment primer, tm:{}C, primer3 heterodimer:{} deltaG, primer3 hairpin score:{} deltaG \n".format(primer["tm e"], primer["hetero e dg"], primer["hairpin e"]),
+                primer["primer e"]
+                ])
+    f.close()
+
 
 #################################
 #### DOWNLOAD PHAGESDB DATA #####
@@ -54,75 +75,78 @@ def download_all_fastas():
 
 def download_phage_metadata():
     """Download sequenced phage metadata from phagesDB"""
-    url = "https://phagesdb.org/data/?set=seq&type=full"
+    if not path.isfile("data/phage_metadata.csv"):
+        url = "https://phagesdb.org/data/?set=seq&type=full"
 
-    r = requests.get(url, allow_redirects=True)
+        r = requests.get(url, allow_redirects=True)
 
-    if r.status_code == 404:
-        return "unable to find multifasta"
+        if r.status_code == 404:
+            return "unable to find multifasta"
+        
+        lines = str(r.content).split("\\n")
+        lines = [l.split("\\t") for l in lines]
+        df = pd.DataFrame(columns = lines[0], data = lines[1:])
+
+        # rename to fit with research code
+        df.rename(columns={'b\'Phage Name':'phage',
+                            'Temperate?':'temperate',
+                            'Cluster':'cluster',
+                            'Subcluster':'subcluster',
+                            'Morphotype':'morphotype',
+                            'Host':'host',
+                            'Genome Length(bp)':'genome length',
+                            'GC%':'gcpercent',
+                            'Phamerated?':'is phamerated',
+                            'Annotation Status':'is annotated'
+                        }, inplace = True)
+        
+        # only retrieve specific columns
+        df = df[['phage','temperate','cluster','subcluster','morphotype','host','genome length','is annotated','is phamerated','gcpercent']]
     
-    lines = str(r.content).split("\\n")
-    lines = [l.split("\\t") for l in lines]
-    df = pd.DataFrame(columns = lines[0], data = lines[1:])
+        # set types
+        df = df.astype({'phage':'str',
+                    'temperate':'bool',
+                    'cluster':'str',
+                    'subcluster':'str',
+                    'morphotype':'str',
+                    'host':'str',
+                    'genome length':'float',
+                    'is annotated':'bool',
+                    'is phamerated':'bool',
+                    'gcpercent':'float'})
 
-    # rename to fit with research code
-    df.rename(columns={'b\'Phage Name':'phage',
-                        'Temperate?':'temperate',
-                        'Cluster':'cluster',
-                        'Subcluster':'subcluster',
-                        'Morphotype':'morphotype',
-                        'Host':'host',
-                        'Genome Length(bp)':'genome length',
-                        'GC%':'gcpercent',
-                        'Phamerated?':'is phamerated',
-                        'Annotation Status':'is annotated'
-                       }, inplace = True)
-    
-    # only retrieve specific columns
-    df = df[['phage','temperate','cluster','subcluster','morphotype','host','genome length','is annotated','is phamerated','gcpercent']]
-   
-    # set types
-    df = df.astype({'phage':'str',
-                'temperate':'bool',
-                'cluster':'str',
-                'subcluster':'str',
-                'morphotype':'str',
-                'host':'str',
-                'genome length':'float',
-                'is annotated':'bool',
-                'is phamerated':'bool',
-                'gcpercent':'float'})
-
-    # export to csv
-    df.to_csv("data/phage_metadata.csv")
+        # export to csv
+        df.to_csv("data/phage_metadata.csv", index=False)
 
 def download_phage_genes(phage):
     query_url = "https://phagesdb.org/api/genesbyphage/{}/".format(phage)
 
     try:
-        response = requests.get(url = query_url).json()['results']
-        df = pd.DataFrame(response)
+        if not path.isfile("data/genes_by_phage/{}_genes.csv".format(phage)):
+            response = requests.get(url = query_url).json()['results']
+            df = pd.DataFrame(response)
 
-        a_file = open("static_data/conversion_table.pkl", "rb")
-        conversion_table = pickle.load(a_file)
-        df["phage"] = df["PhageID"].apply(lambda x: x['PhageID'])
-        df["gene number"] = df['GeneID'].apply(lambda x: x.split("_")[-1])
-        df["pham"] = df['phams'].apply(lambda x: x[0])
-        df["Notes"] = df["Notes"].apply(lambda x: str(x).lower()[2:-1])
-        df["function"] = df["Notes"].apply(lambda x: conversion_table[x] if x in conversion_table.keys() else "NKF")
+            a_file = open("static_data/conversion_table.pkl", "rb")
+            conversion_table = pickle.load(a_file)
+            df["phage"] = df["PhageID"].apply(lambda x: x['PhageID'])
+            df["gene number"] = df['GeneID'].apply(lambda x: x.split("_")[-1])
+            df["pham"] = df['phams'].apply(lambda x: x[0])
+            df["Notes"] = df["Notes"].apply(lambda x: str(x).lower()[2:-1])
+            df["function"] = df["Notes"].apply(lambda x: conversion_table[x] if x in conversion_table.keys() else "NKF")
 
-        df.rename(columns={'GeneID':'gene ID',
-                            'translation':'translation',
-                            'Orientation':'orientation',
-                            'Start':'start',
-                            'Stop':'stop',
-                            'Notes':'uncleaned function'
-                            }, inplace = True)
-                            
-        df = df[['gene ID','pham','function','translation','orientation','phage','gene number','start','stop','uncleaned function']]
-        df.to_csv("data/genes_by_phage/{}_genes.csv".format(phage))
-        print(phage)
-        return df
+            df.rename(columns={'GeneID':'gene ID',
+                                'translation':'translation',
+                                'Orientation':'orientation',
+                                'Start':'start',
+                                'Stop':'stop',
+                                'Notes':'uncleaned function'
+                                }, inplace = True)
+                                
+            df = df[['gene ID','pham','function','translation','orientation','phage','gene number','start','stop','uncleaned function']]
+            df.to_csv("data/genes_by_phage/{}_genes.csv".format(phage))
+            return df
+        else:
+            return pd.read_csv("data/genes_by_phage/{}_genes.csv".format(phage))
     except: # if phage has no genes df then edit the metadata csv and return empty DF
         phage_df = pd.read_csv("data/phage_metadata.csv")
         phage_df[phage_df["phage"]!=phage].to_csv("data/phage_metadata.csv")
@@ -136,7 +160,7 @@ def download_all_phage_genes():
         meta_file_path = "data/phage_metadata.csv"
         if not path.isfile(meta_file_path):
             download_phage_metadata()
-        phage_df = pd.read_csv(file_path)
+        phage_df = pd.read_csv(meta_file_path)
         phages = phage_df["phage"].unique()
 
         proc = subprocess.check_call("mkdir -p data/genes_by_phage", shell=True)
@@ -169,6 +193,13 @@ def fasta_to_DNA(phage):
     DNA = ''.join(f.read().split("\n")[1:]).replace(" ","")
     return DNA
 
+def eGFP_DNA():
+    """ Extract EGFP DNA into string form from a fasta file """
+    file_path = 'static_data/eGFP.fasta'
+    f = open(file_path, "r")
+    DNA = ''.join(f.read().split("\n")[1:]).replace(" ","")
+    return DNA
+
 
 
 ####################################
@@ -190,19 +221,34 @@ def collect_gene_info(phage, gp_num):
     else:
         genes_df = pd.read_csv(file_path)
 
+    # is gene number is not in list 
+    if genes_df.empty:
+        return ""
+
     # extract gene info
     target_gene_df = genes_df[genes_df["gene number"] == gp_num]
 
     # is gene number is not in list 
-    if target_gene_df.shape[0] == 0:
+    if target_gene_df.empty:
         return genes_df.shape[0]
 
     start_bp = int(target_gene_df["start"].iloc[0])
     stop_bp = int(target_gene_df["stop"].iloc[0])
     function = str(target_gene_df["function"].iloc[0])
     pham = str(target_gene_df["pham"].iloc[0])
+    orientation = str(target_gene_df["orientation"].iloc[0])
     
-    return start_bp, stop_bp, pham, function
+    return start_bp, stop_bp, pham, function, orientation
+
+def collect_phage_info(phage):
+    """ Collect phage info from metadata file """
+    phage_df = pd.read_csv("data/phage_metadata.csv")
+    target = phage_df[phage_df["phage"]==phage]
+
+    if target.empty:
+        return ""
+
+    return target.iloc[0].to_dict()
 
 
 def primer3_calculate_hairpin(seq):
@@ -244,7 +290,7 @@ def find_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, edit_type
     possible_primers = find_possible_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, edit_type, template_DNA)
     possible_primers["hairpin"] = possible_primers["primer_seq"].apply(primer3_calculate_hairpin)
     possible_primers["tm"] = possible_primers["primer_seq"].apply(primer3_calculate_tm)
-    possible_primers.dropna(inplace=True)
+    possible_primers.dropna(subset=["tm","hairpin"], inplace=True)
     # set hairpin to zero, below zero indicates binding
     possible_primers = possible_primers[possible_primers["hairpin"]>=-1000]
 
@@ -280,12 +326,12 @@ def find_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, edit_type
                                 
                                 primer_sets = primer_sets.append({  "primer f": f_row["primer_seq"],
                                                                     "primer r": r_row["primer_seq"],
-                                                                    "primer e": e_row["primer_seq"],
                                                                     "primer c": c_row["primer_seq"],
+                                                                    "primer e": e_row["primer_seq"],
                                                                     "tm f": round(f_row["tm"],2),
                                                                     "tm r": round(r_row["tm"],2),
                                                                     "tm c": round(c_row["tm"],2),
-                                                                    "tm r": round(e_row["tm"],2),
+                                                                    "tm e": round(e_row["tm"],2),
                                                                     "hetero f dg": round(dg_f,2),
                                                                     "hetero c dg": round(dg_c,2),
                                                                     "hetero e dg": round(dg_e,2),
@@ -293,7 +339,7 @@ def find_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, edit_type
                                                                     "hairpin r": round(r_row["hairpin"],2),
                                                                     "hairpin c": round(c_row["hairpin"],2),
                                                                     "hairpin e": round(e_row["hairpin"],2),
-                                                                    "min heterodimer": -round(min_heterodimer), # sign change and rounding are for final sort
+                                                                    "min heterodimer": round(min_heterodimer/1000,1), # sign change and rounding are for final sort
                                                                     "mean tm": mean_tm,
                                                                     "diff tm target": round(abs(melting_temp-mean_tm),1),
                                                                     "tm range": round(max_tm-min_tm, 1),
@@ -317,8 +363,7 @@ def find_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, edit_type
     primer_sets["e start"] = primer_sets["primer e"].apply(find_start_position, args=(DNA,"F"))
     primer_sets["e edited start"] = primer_sets["primer e"].apply(find_start_position, args=(edited_DNA,"F"))  # this should be zero becuase it doesn't bind!
 
-
-    return primer_sets.sort_values(by = ["tm range","min heterodimer", "diff tm target"]).reset_index(drop=True)
+    return primer_sets.sort_values(by = ["tm range","min heterodimer", "diff tm target"], ascending=[True, False, True]).reset_index(drop=True)
 
 
 def all_possible_subsets(seq, primer_length, primer_type):
@@ -329,6 +374,7 @@ def all_possible_subsets(seq, primer_length, primer_type):
 def find_possible_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, edit_type, template_DNA, primer_length = 20, search_size = 200, testing = False):
     """ Finds region to extract primers from then get ever possible subset
     """
+    arm_length = primer_length-2
     start_index = bp_position_start-1
     stop_index = bp_position_stop-1 
     if edit_type == "replacement": # insertion
@@ -343,11 +389,15 @@ def find_possible_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, 
         r_df = all_possible_subsets(reverse_region, primer_length, "r")
 
         # possible control primers
-        control_region = DNA[start_index:stop_index]
+        control_region = DNA[start_index-arm_length:stop_index+arm_length+1]
+        if len(control_region)>search_size:
+            control_region = control_region[:search_size]
         c_df = all_possible_subsets(control_region, primer_length, "c")
 
         # possible experimental primers
-        experimental_region = edited_DNA[start_index:start_index+len(template_DNA)]
+        experimental_region = edited_DNA[start_index-arm_length:start_index+len(template_DNA)+arm_length]
+        if len(experimental_region)>search_size:
+            experimental_region = experimental_region[:search_size]
         e_df = all_possible_subsets(experimental_region, primer_length, "e")
 
     elif edit_type == "insertion":
@@ -364,12 +414,13 @@ def find_possible_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, 
         r_df = all_possible_subsets(reverse_region, primer_length, "r")
 
         # possible control primers
-        control_region = DNA[start_index-primer_length+1:stop_index+primer_length-1]
+        control_region = DNA[start_index-arm_length:stop_index+arm_length]
         c_df = all_possible_subsets(control_region, primer_length, "c")
 
         # possible experimental primers
         experimental_region = edited_DNA[start_index:start_index+len(template_DNA)]
-
+        if len(experimental_region)>search_size:
+            experimental_region = experimental_region[:search_size]
         e_df = all_possible_subsets(experimental_region, primer_length, "e")
 
     elif  edit_type == "deletion": # deletion
@@ -385,15 +436,17 @@ def find_possible_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, 
         r_df = all_possible_subsets(reverse_region, primer_length, "r")
 
         # possible control primers
-        control_region = DNA[start_index:stop_index]
+        control_region = DNA[start_index-arm_length:stop_index+arm_length]
+        if len(control_region)>search_size:
+            control_region = control_region[:search_size]
         c_df = all_possible_subsets(control_region, primer_length, "c")
         # possible experimental primers
-        experimental_region = edited_DNA[start_index-primer_length+1:start_index+primer_length-1]
+        experimental_region = edited_DNA[start_index-arm_length:start_index+arm_length]
         e_df = all_possible_subsets(experimental_region, primer_length, "e")
     
     possible_primers = pd.concat([f_df, r_df, c_df, e_df])
 
-    possible_primers.drop_duplicates(subset=None, keep=False, inplace=True)
+    possible_primers.drop_duplicates(subset=["primer_seq"], keep=False, inplace=True)
     # check for duplicate strands
     if not possible_primers["primer_seq"].is_unique:
         raise TypeError

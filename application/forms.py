@@ -18,6 +18,8 @@ class BRED_edit_form(FlaskForm):
     # type of edit (replacement, insertion, deletion)
     edit_type = StringField ('edit_type', validators=[DataRequired()])
     location_type = StringField ('location_type', validators=(Optional(),))
+    orientation = StringField ('orientation', validators=(Optional(),))
+    EGFP = BooleanField('EGFP', validators=(Optional(),))
     # submit
     submit = SubmitField('Generate BRED Substrates')
 

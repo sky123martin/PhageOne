@@ -3,6 +3,7 @@ research_notebooks/.ipynb_checkpoints/*
 research_notebooks/networks/*
 application/__pycache__/
 data/*
+output/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

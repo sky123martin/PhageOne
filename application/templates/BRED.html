@@ -14,7 +14,9 @@
         }
     </style>
   </head>
-  <body onload="load();">
+  <body>
+    <br>
+<div class="container" style="width: 100%;">
 
     <ul class="nav nav-tabs">
         <li class="nav-item">
@@ -24,20 +26,22 @@
           <a class="nav-link" href="{{ url_for('EditingGuide') }}">Editing Guides</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="{{ url_for('BRED') }}">BRED Assistant</a>
+          <a class="nav-link active" aria-current="page" href="{{ url_for('BRED') }}">BRED Material Generator</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{{ url_for('GenomeSynteny') }}">Genome Synteny</a>
         </li>
 
       </ul>
-
+</div>
+      {% if "substrate" not in results.keys()%}
       <br>
-      <br>
-
+      <div class="container" style="width: 40%;">
+        <h4>BRED Material Generator</h4>
+        Input below the edit desired and the assistant will generate primers and the substrate needed to complete the BRED protocol.
+        <br><br>
         </form>
         <form action="{{ url_for('BRED') }}" method="post" id = "edit_form">
-            <div class="col col-md-2">
             {{ edit_form.csrf }}
             <div class="form-group" >
               <label for="phage">Phage</label>
@@ -54,7 +58,7 @@
             <div class="form-group" id="form_location_type" >
                 <label for="location_type">Location Type </label>
                 <select id="location_type" name="location_type" onchange="location_input_change(this.value)">
-                    <option value="base pair">base pair (bp)</option>
+                    <option value="base pair" selected>base pair (bp)</option>
                     <option value="gene product number">gene product number (gp)</option>
                 </select>
                 <br>
@@ -67,362 +71,161 @@
                 <label for="bp_position_stop">Stop Base Pair</label>
                 <input type="number" value = "" class="form-control" id="bp_position_stop" name="bp_position_stop" placeholder="">
             </div>
-            <div class="form-group" id="form_gp">
+            <div class="form-group" id="form_gp" style="display:none;">
                 <label for="gp_number">Gene Product Number</label>
                 <input type="number" value = "" class="form-control" id="gp_number" name="gp_number" placeholder="">
             </div>
             <div class="form-group", id="form_DNA_template">
-                <label for="template_DNA">Template Sequence</label>
-                <input type="text" value = "" class="form-control" id="template_DNA" name="template_DNA" placeholder="ATGC...">
+                <label for="template_DNA">Template Sequence</label><br>
+                <textarea form ="edit_form" rows="3" cols="60" id="template_DNA" name="template_DNA"></textarea><br> 
+                <div align="right";> Use enchanced green fluorescent sequence (<a href="https://www.ncbi.nlm.nih.gov/protein/WP_031943942.1?" target="_blank">eGFP</a>)<input name = "EGFP" type="checkbox" id="EGFP_check" onclick="insert_GFP(this);"></div>
+            </div>
+
+            <div class="form-group", id="form_orientation">
+                <label for="orientation">Orientation</label>
+                <select id="orientation_type" name="orientation">
+                    <option value='F' selected>Forward</option>
+                    <option value='R'>Reverse</option>
+                </select>
+                
             </div>
             {% if error != "" %}
             <small style="color:red;">{{error}}</small>
-            <br>
             {% endif %}
-
-            {% if error == "" and "substrate" in results.keys()%}
-            <form action="{{ url_for('BRED') }}">
-                <input type="submit" class="btn btn-primary" value="New Search" />
-            </form>
-            
-            {% else %} 
-            <button type="submit" class="btn btn-primary">Submit</button>
+            <br>
+            <button align="right"; type="submit" class="btn btn-primary">Generate BRED Materials</button>
             {{ edit_form.csrf_token }}
             {% endif %}
+            </form>
+
         </div>
-    </form>
-</div>
-</div>
+    {% if "substrate" in results.keys() %}
+    <div class="container" style="width: 100%;">
+        <br>
+        <div>
+        <img ALIGN = "left" src="https://phagesdb.org/media/emPics/{{phage}}_EM_Thumb.jpg"  onerror=this.onerror=null;this.src='https://phagesdb.org/media/plaquePics/{{phage}}_Plaque.png';" alt="{{phage}} Picture" title="{{phage}} Picture" width="200px" height="200px">
 
-
-{% if "substrate" in results.keys() %}
-<div class="row">
-    <div class="column">
-        <img src="https://phagesdb.org/media/emPics/{{phage}}_EM_Thumb.jpg"  onerror=this.onerror=null;this.src='https://phagesdb.org/media/plaquePics/{{phage}}_Plaque.png';" alt="{{phage}} Picture" title="{{phage}} Picture" width="200px" height="200px">
-    </div>
-    <div class="column" style="column-width: 10px;"></div>
-    <div class="column">
         <h3>Phage: <a href="https://phagesdb.org/phages/{{phage}}/">{{phage}}</a></h3>
         <h3>
-            Edit: {{results["edit type"]}} of
+            Edit: {{results["edit type"]}} at
             
             {% if "function" in results.keys() %}
                 gene <a href="https://phagesdb.org/genes/{{phage}}_CDS_{{results['gene number']}}/" target="_blank"> #{{results["gene number"]}} </a>{{results["function"]}} 
                 [pham <a href = "https://phagesdb.org/phams/{{results['pham']}}/" target="_blank">{{results["pham"]}}</a>, site {{bp_position_start}}-{{bp_position_stop}}bp]
+            {% elif  results["edit type"]=="insertion"%} 
+                {{bp_position_start}}bp
             {% else %} 
                 region {{bp_position_start}}-{{bp_position_stop}}bp
             {% endif %} 
         </h3>
     </div>
-</div>
-<div class="col-md-8" onload="load();">
+    
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <!-- &nbsp;<button type="button" class="btn btn-info" style="float: left;"><a style="color:white;" href="{{ url_for('BRED') }}" >New Search</a></button> -->
+        <!-- &nbsp;<button type="button" style="float: right;" class="btn btn-secondary"><a style="color:white;" href="/file/{{'{}_{}_PRIMERS_{}.csv'.format(phage, results['edit type'], results['ID'])}}" >Download All Possible Primer Sets</a></button>
+        &nbsp;<button type="button" class="btn btn-secondary" style="float: right;"><a style="color:white;" href="/file/{{phage+'_'+results['edit type']+'_'+results['ID']+'.fasta'}}" >Download BRED Materials</a></button> -->
+        <br>
+        <hr class="solid">
 
-{% if results["edit type"] == "replacement" %}
-<h4><a href="#original-DNA">DNA</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 15%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>homologous region</th>
-                <th style='width: 40%; text-align: left;'><a href="#region-DNA" style="display:block;">target region</a></th>
-                <th style='width: 15%; text-align: left;'>homologous region </th>
-                <th style='width: 15%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='background-color: {{colors["background"]}}; width: 15%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-20}}-{{bp_position_start}}</th> 
-                <th style='background-color: {{colors["old_region"]}}; width: 40%; text-align: center;'>{{bp_position_start}}-{{bp_position_stop}}</th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+20}}</th>
-                <th style='background-color: {{colors["background"]}}; width: 15%; text-align: left;'></th>
-                
-            </tr>
-        </tbody>
-        </table>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 0%; text-align: right;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["f start"]}}-{{primer["f start"]+20}}</th> 
-                <th style='width: 28%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["c start"]}}-{{primer["c start"]+20}}</th>
-                <th style='width: 28%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r start"]-20}}-{{primer["r start"]}}</th>
-                <th style='width: 0%; text-align: left;'></th>
-                
-            </tr>
-            <tr height="30px">
-                <th style='width: 10%; text-align: right;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
-                <th style='width: 18%; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#control-primer" style="display:block;">control primer</a></th>
-                <th style='width: 18%; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
-                <th style='width: 10%; text-align: left;'></th>
-            </tr>
-        </tbody>
-        </table>
-    <h4><a href="#substrate-DNA">Substrate</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 25%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>homologous region</th>
-                <th style='width: 30%; text-align: left;'><a href="#template-DNA" style="display:block;">template sequence</a></th>
-                <th style='width: 15%; text-align: left;'>homologous region </th>
-                <th style='width: 25%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='width: 15%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th> 
-                <th style='background-color: {{colors["new_region"]}}; width: 40%; text-align: center;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th>
-                <th style='width: 15%; text-align: left;'></th>
-                
-            </tr>
-        </tbody>
-        </table>
-    <h4><a href="#edited-DNA">Edited DNA</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 25%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>homologous region</th>
-                <th style='width: 30%; text-align: left;'><a href="#template-DNA" style="display:block;">template sequence</a></th>
-                <th style='width: 15%; text-align: left;'>homologous region </th>
-                <th style='width: 25%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='background-color: {{colors["background"]}}; width: 25%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-20}}-{{bp_position_start}}</th> 
-                <th style='background-color: {{colors["new_region"]}}; width: 30%; text-align: center;'>{{bp_position_start}}-{{bp_position_stop}}</th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+20}}</th>
-                <th style='background-color: {{colors["background"]}}; width: 25%; text-align: left;'></th>
-                
-            </tr>
-        </tbody>
-        </table>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 7%; text-align: right;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["f edited start"]}}-{{primer["f edited start"]+20}}</th> 
-                <th style='width: 21%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["e edited start"]}}-{{primer["e edited start"]+20}}</th>
-                <th style='width: 21%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r edited start"]-20}}-{{primer["r edited start"]}}</th>
-                <th style='width: 7%; text-align: left;'></th>
-                
-            </tr>
-            <tr height="30px">
-                <th style='width: 10%; text-align: right;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
-                <th style='width: 18%; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#experiment-primer" style="display:block;">experimental primer</a></th>
-                <th style='width: 18%; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
-                <th style='width: 10%; text-align: left;'></th>
-            </tr>
-        </tbody>
-        </table>
-{% endif %}
-{% if results["edit type"] == "insertion" %}
-<h4><a href="#original-DNA">DNA</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 35%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>homologous region</th>
-                <th style='width: 0.5%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>homologous region </th>
-                <th style='width: 35%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='background-color: {{colors["background"]}}; width: 35%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-20}}-{{bp_position_start}}</th> 
-                <th style='background-color: {{colors["old_region"]}}; width: 0.5%; text-align: center;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+20}}</th>
-                <th style='background-color: {{colors["background"]}}; width: 35%; text-align: left;'></th>
-                
-            </tr>
-        </tbody>
-        </table>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 20%; text-align: right;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["f start"]}}-{{primer["f start"]+20}}</th> 
-                <th style='width: 8%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["c start"]}}-{{primer["c start"]+20}}</th>
-                <th style='width: 8%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r start"]-20}}-{{primer["r start"]}}</th>
-                <th style='width: 20%; text-align: left;'></th>
-            </tr>
-            <tr height="30px">
-                <th style='width: 20%; text-align: right;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
-                <th style='width: 8%; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#experiment-primer" style="display:block;">control primer</a></th>
-                <th style='width: 8; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
-                <th style='width: 20%; text-align: left;'></th>
-            </tr>
-        </tbody>
-        </table>
-    <h4><a href="#substrate-DNA">Substrate</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 15%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>homologous region</th>
-                <th style='width: 40%; text-align: left;'><a href="#template-DNA" style="display:block;">template sequence</a></th>
-                <th style='width: 15%; text-align: left;'>homologous region </th>
-                <th style='width: 15%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='width: 15%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th> 
-                <th style='background-color: {{colors["new_region"]}}; width: 40%; text-align: center;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th>
-                <th style='width: 15%; text-align: left;'></th>
-                
-            </tr>
-        </tbody>
-        </table>
-    <h4><a href="#edited-DNA">Edited DNA</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 15%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>homologous region</th>
-                <th style='width: 40%; text-align: left;'><a href="#region-DNA" style="display:block;">target region</a></th>
-                <th style='width: 15%; text-align: left;'>homologous region </th>
-                <th style='width: 15%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='background-color: {{colors["background"]}}; width: 15%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-20}}-{{bp_position_start}}</th> 
-                <th style='background-color: {{colors["new_region"]}}; width: 40%; text-align: center;'>{{bp_position_start}}-{{bp_position_stop}}</th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+20}}</th>
-                <th style='background-color: {{colors["background"]}}; width: 15%; text-align: left;'></th>
-            </tr>
-        </tbody>
-        </table>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 0%; text-align: right;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'> {{primer["f edited start"]}}-{{primer["f edited start"]+20}}</th> 
-                <th style='width: 28%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'> {{primer["e edited start"]}}-{{primer["e edited start"]+20}} </th>
-                <th style='width: 28%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r edited start"]-20}}-{{primer["r edited start"]}} </th>
-                <th style='width: 0%; text-align: left;'></th>
-            </tr>
-            <tr height="30px">
-                <th style='width: 2%; text-align: right;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
-                <th style='width: 26%; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#experiment-primer" style="display:block;">experimental primer</a></th>
-                <th style='width: 18%; text-align: left;'></th>
-                <th style='width: 26%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
-                <th style='width: 2%; text-align: left;'></th>
-            </tr>
-        </tbody>
-        </table>
-{% endif %}
-{% if results["edit type"] == "deletion" %}
-<h4><a href="#original-DNA">DNA</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 15%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>homologous region</th>
-                <th style='width: 40%; text-align: left;'><a href="#region-DNA" style="display:block;">target region</a></th>
-                <th style='width: 15%; text-align: left;'>homologous region </th>
-                <th style='width: 15%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='background-color: {{colors["background"]}}; width: 15%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-20}}-{{bp_position_start}}</th> 
-                <th style='background-color: {{colors["old_region"]}}; width: 40%; text-align: center;'>{{bp_position_start}}-{{bp_position_stop}}</th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+20}}</th>
-                <th style='background-color: {{colors["background"]}}; width: 15%; text-align: left;'></th>
-            </tr>
-        </tbody>
-        </table>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 1%; text-align: right;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["f start"]}}-{{primer["f start"]+20}}</th> 
-                <th style='width: 25%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["c start"]}}-{{primer["c start"]+20}}</th>
-                <th style='width: 23%; text-align: left;'></th>
-                <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r start"]-20}}-{{primer["r start"]}}</th>
-                <th style='width: 5; text-align: left;'></th>
-                
-            </tr>
-            <tr height="30px">
-                <th style='width: 10%; text-align: right;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
-                <th style='width: 18%; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#control-primer" style="display:block;">control primer</a></th>
-                <th style='width: 18%; text-align: left;'></th>
-                <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
-                <th style='width: 10%; text-align: left;'></th>
-            </tr>
-        </tbody>
-        </table>
-    <h4><a href="#substrate-DNA">Substrate</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 35%; text-align: left;'></th>
-                <th style='width: 15%; text-align: right;'>homologous</th>
-                <th style='width: 0.5%; text-align: center;'> </th>
-                <th style='width: 15%; text-align: left;'> regions</th>
-                <th style='width: 35%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='width: 35%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th> 
-                <th style='background-color: {{colors["new_region"]}}; width: 0.5%; text-align: center;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th>
-                <th style='width: 35%; text-align: left;'></th>
-                
-            </tr>
-        </tbody>
-        </table>
-        <h4><a href="#edited-DNA">Edited DNA</a></h4>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
-            <tr height="30px">
-                <th style='width: 35%; text-align: left;'></th>
-                <th style='width: 15%; text-align: right;'>homologous</th>
-                <th style='width: 0.5%; text-align: left;'></th>
-                <th style='width: 15%; text-align: left;'>regions </th>
-                <th style='width: 35%; text-align: left;'></th>
-            </tr>
-            <tr height="60px">
-                <th style='background-color: {{colors["background"]}}; width: 35%; text-align: right;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-20}}-{{bp_position_start}}</th> 
-                <th style='background-color: {{colors["new_region"]}}; width: 0.5%; text-align: center;'></th>
-                <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+20}}</th>
-                <th style='background-color: {{colors["background"]}}; width: 35%; text-align: left;'></th>
-                
-            </tr>
-        </tbody>
-        </table>
-        <table style='table-layout:fixed;width:100%'>
-            <tbody>
+        {% if results["edit type"] == "replacement" %}
+        <h4><a href="#original-DNA">DNA</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 15%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>homologous region</th>
+                    <th style='width: 40%; text-align: left;'><a href="#region-DNA" style="display:block;">target region</a></th>
+                    <th style='width: 15%; text-align: left;'>homologous region </th>
+                    <th style='width: 15%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='background-color: {{colors["background"]}}; width: 15%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-results["homo length"]}}-{{bp_position_start}}</th> 
+                    <th style='background-color: {{colors["old_region"]}}; width: 40%; text-align: center;'>{{bp_position_start}}-{{bp_position_stop}}</th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+results["homo length"]}}</th>
+                    <th style='background-color: {{colors["background"]}}; width: 15%; text-align: left;'></th>
+                    
+                </tr>
+            </tbody>
+            </table>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 0%; text-align: right;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["f start"]}}-{{primer["f start"]+results["homo length"]}}</th> 
+                    <th style='width: 28%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["c start"]}}-{{primer["c start"]+results["homo length"]}}</th>
+                    <th style='width: 28%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r start"]-results["homo length"]}}-{{primer["r start"]}}</th>
+                    <th style='width: 0%; text-align: left;'></th>
+                    
+                </tr>
                 <tr height="30px">
                     <th style='width: 10%; text-align: right;'></th>
-                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'> {{primer["f edited start"]}}-{{primer["f edited start"]+20}}</th> 
+                    <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
                     <th style='width: 18%; text-align: left;'></th>
-                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'> {{primer["e edited start"]}}-{{primer["e edited start"]+20}} </th>
+                    <th style='width: 14%; text-align: center;'><a href="#control-primer" style="display:block;">control primer</a></th>
                     <th style='width: 18%; text-align: left;'></th>
-                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r edited start"]-20}}-{{primer["r edited start"]}} </th>
+                    <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
                     <th style='width: 10%; text-align: left;'></th>
+                </tr>
+            </tbody>
+            </table>
+        <h4><a href="#substrate-DNA">Substrate</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 25%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>homologous region</th>
+                    <th style='width: 30%; text-align: left;'><a href="#template-DNA" style="display:block;">template sequence</a></th>
+                    <th style='width: 15%; text-align: left;'>homologous region </th>
+                    <th style='width: 25%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='width: 15%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th> 
+                    <th style='background-color: {{colors["new_region"]}}; width: 40%; text-align: center;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th>
+                    <th style='width: 15%; text-align: left;'></th>
+                    
+                </tr>
+            </tbody>
+            </table>
+        <h4><a href="#edited-DNA">Edited DNA</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 25%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>homologous region</th>
+                    <th style='width: 30%; text-align: left;'><a href="#template-DNA" style="display:block;">template sequence</a></th>
+                    <th style='width: 15%; text-align: left;'>homologous region </th>
+                    <th style='width: 25%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='background-color: {{colors["background"]}}; width: 25%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-results["homo length"]}}-{{bp_position_start}}</th> 
+                    <th style='background-color: {{colors["new_region"]}}; width: 30%; text-align: center;'>{{bp_position_start}}-{{bp_position_stop}}</th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+results["homo length"]}}</th>
+                    <th style='background-color: {{colors["background"]}}; width: 25%; text-align: left;'></th>
+                    
+                </tr>
+            </tbody>
+            </table>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 7%; text-align: right;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["f edited start"]}}-{{primer["f edited start"]+results["homo length"]}}</th> 
+                    <th style='width: 21%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["e edited start"]}}-{{primer["e edited start"]+results["homo length"]}}</th>
+                    <th style='width: 21%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r edited start"]-results["homo length"]}}-{{primer["r edited start"]}}</th>
+                    <th style='width: 7%; text-align: left;'></th>
+                    
                 </tr>
                 <tr height="30px">
                     <th style='width: 10%; text-align: right;'></th>
@@ -433,128 +236,354 @@
                     <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
                     <th style='width: 10%; text-align: left;'></th>
                 </tr>
-        </tbody>
-        </table>
-{% endif %}
-        <hr class="solid">
-
-        <b> Substrate </b>
-        <div id="substrate-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['new_region']}};scrollbar-base-color:#DEBB07;">
-            <span>{{results["substrate"]}}</span>
-            </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('substrate-DNA');">Copy</button></p>
-
-        <hr class="solid">
-
-        <b> Forward Primer </b>
-        <p>
-            Tm:  {{primer["tm f"]}}&#x2103; <br>
-            Binding Start Location in DNA: {{primer["f start"]}} bps <br>
-            Binding Start Location in Edited DNA: {{primer["f edited start"]}} bp <br>
-            Hairpin DeltaG (Gibbs free energy): {{primer["hairpin f"]}} <br>
-            Heterodimer deltaG with reverse primer (Gibbs free energy): {{primer["hetero f dg"]}}<br>
-        </p>
-        <div id="forward-primer" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['primer']}};scrollbar-base-color:#DEBB07;">
-            {{primer["primer f"]}}
-            </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('forward-primer');">Copy</button></p>
-
-        <hr class="solid">
-
-        <b> Control Primer </b>
-        <p>
-            Tm:  {{primer["tm c"]}}&#x2103; <br>
-            Binding Start Location in DNA: {{primer["c start"]}} bp <br>
-            Binding Start Location in Edited DNA: NA <br>
-            Hairpin DeltaG (Gibbs free energy): {{primer["hairpin c"]}} <br>
-            Heterodimer deltaG with reverse primer (Gibbs free energy): {{primer["hetero c dg"]}}<br>
-        </p>
-        <div id="control-primer" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['primer']}};scrollbar-base-color:#DEBB07;">
-            {{primer["primer c"]}}
-        </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('control-primer');">Copy</button></p>
-        
-        <hr class="solid">
-        
-        <b> Experiment Primer </b>
-        <p>
-            Tm:  {{primer["tm e"]}}&#x2103; <br>
-            Binding Start Location in DNA: NA <br>
-            Binding Start Location in Edited DNA: {{primer["e edited start"]}} bp<br>
-            Hairpin DeltaG (Gibbs free energy): {{primer["hairpin e"]}} <br>
-            Heterodimer deltaG with reverse primer (Gibbs free energy): {{primer["hetero e dg"]}}<br>
-        </p>
-        <div id="experiment-primer" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['primer']}};scrollbar-base-color:#DEBB07;">
-            {{primer["primer e"]}}
-        </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('experiment-primer');">Copy</button></p>
-        
-        <hr class="solid">
-        
-
-        <b> Reverse Primer </b>
-        <p>
-            Tm:  {{primer["tm r"]}}&#x2103; <br>
-            Binding Start Location in DNA: {{primer["r start"]}} bp <br>
-            Binding Start Location in Edited DNA: {{primer["r edited start"]}} bp<br>
-            Hairpin DeltaG (Gibbs free energy): {{primer["hairpin r"]}} <br>
-        </p>
-        <div id="reverse-primer" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['primer']}};scrollbar-base-color:#DEBB07;">
-            {{primer["primer r"]}}
-            </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('reverse-primer');">Copy</button></p>
-
-        <hr class="solid">
-
-    {% if results["edit type"] == "replacement" or results["edit type"] == "deletion" %}
-        <b> Target Region </b>
-        <div id="region-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['old_region']}};scrollbar-base-color:#DEBB07;">
-            {{results["region"]}}
-            </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('edited-DNA');">Copy</button></p>
-
-        <hr class="solid">
+            </tbody>
+            </table>
     {% endif %}
-    {% if results["edit type"] == "replacement" or results["edit type"] == "insertion" %}
-        <b> Template Sequence (input)  </b>
-        <div id="template-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['new_region']}};scrollbar-base-color:#DEBB07;">
-            {{results["template DNA"]}}
-            </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('template-DNA');">Copy</button></p>
+    {% if results["edit type"] == "insertion" %}
+    <h4><a href="#original-DNA">DNA</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 35%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>homologous region</th>
+                    <th style='width: 0.5%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>homologous region </th>
+                    <th style='width: 35%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='background-color: {{colors["background"]}}; width: 35%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-results["homo length"]}}-{{bp_position_start}}</th> 
+                    <th style='background-color: {{colors["old_region"]}}; width: 0.5%; text-align: center;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+results["homo length"]}}</th>
+                    <th style='background-color: {{colors["background"]}}; width: 35%; text-align: left;'></th>
+                    
+                </tr>
+            </tbody>
+            </table>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 20%; text-align: right;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["f start"]}}-{{primer["f start"]+results["homo length"]}}</th> 
+                    <th style='width: 8%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["c start"]}}-{{primer["c start"]+results["homo length"]}}</th>
+                    <th style='width: 8%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r start"]-results["homo length"]}}-{{primer["r start"]}}</th>
+                    <th style='width: 20%; text-align: left;'></th>
+                </tr>
+                <tr height="30px">
+                    <th style='width: 20%; text-align: right;'></th>
+                    <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
+                    <th style='width: 8%; text-align: left;'></th>
+                    <th style='width: 14%; text-align: center;'><a href="#experiment-primer" style="display:block;">control primer</a></th>
+                    <th style='width: 8; text-align: left;'></th>
+                    <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
+                    <th style='width: 20%; text-align: left;'></th>
+                </tr>
+            </tbody>
+            </table>
+        <h4><a href="#substrate-DNA">Substrate</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 15%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>homologous region</th>
+                    <th style='width: 40%; text-align: left;'><a href="#template-DNA" style="display:block;">template sequence</a></th>
+                    <th style='width: 15%; text-align: left;'>homologous region </th>
+                    <th style='width: 15%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='width: 15%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th> 
+                    <th style='background-color: {{colors["new_region"]}}; width: 40%; text-align: center;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th>
+                    <th style='width: 15%; text-align: left;'></th>
+                    
+                </tr>
+            </tbody>
+            </table>
+        <h4><a href="#edited-DNA">Edited DNA</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 15%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>homologous region</th>
+                    <th style='width: 40%; text-align: left;'><a href="#region-DNA" style="display:block;">target region</a></th>
+                    <th style='width: 15%; text-align: left;'>homologous region </th>
+                    <th style='width: 15%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='background-color: {{colors["background"]}}; width: 15%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-results["homo length"]}}-{{bp_position_start}}</th> 
+                    <th style='background-color: {{colors["new_region"]}}; width: 40%; text-align: center;'>{{bp_position_start}}-{{bp_position_stop}}</th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+results["homo length"]}}</th>
+                    <th style='background-color: {{colors["background"]}}; width: 15%; text-align: left;'></th>
+                </tr>
+            </tbody>
+            </table>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 0%; text-align: right;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'> {{primer["f edited start"]}}-{{primer["f edited start"]+results["homo length"]}}</th> 
+                    <th style='width: 28%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'> {{primer["e edited start"]}}-{{primer["e edited start"]+results["homo length"]}} </th>
+                    <th style='width: 28%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r edited start"]-results["homo length"]}}-{{primer["r edited start"]}} </th>
+                    <th style='width: 0%; text-align: left;'></th>
+                </tr>
+                <tr height="30px">
+                    <th style='width: 2%; text-align: right;'></th>
+                    <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
+                    <th style='width: 26%; text-align: left;'></th>
+                    <th style='width: 14%; text-align: center;'><a href="#experiment-primer" style="display:block;">experimental primer</a></th>
+                    <th style='width: 18%; text-align: left;'></th>
+                    <th style='width: 26%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
+                    <th style='width: 2%; text-align: left;'></th>
+                </tr>
+            </tbody>
+            </table>
     {% endif %}
-        <hr class="solid">
-        <b> Original DNA </b>
-        <div id="original-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['background']}};scrollbar-base-color:#DEBB07;">
-            {{results["DNA"]}}
-            </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('edited-DNA');">Copy</button></p>
-        
+    {% if results["edit type"] == "deletion" %}
+    <h4><a href="#original-DNA">DNA</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 15%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>homologous region</th>
+                    <th style='width: 40%; text-align: left;'><a href="#region-DNA" style="display:block;">target region</a></th>
+                    <th style='width: 15%; text-align: left;'>homologous region </th>
+                    <th style='width: 15%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='background-color: {{colors["background"]}}; width: 15%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-results["homo length"]}}-{{bp_position_start}}</th> 
+                    <th style='background-color: {{colors["old_region"]}}; width: 40%; text-align: center;'>{{bp_position_start}}-{{bp_position_stop}}</th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+results["homo length"]}}</th>
+                    <th style='background-color: {{colors["background"]}}; width: 15%; text-align: left;'></th>
+                </tr>
+            </tbody>
+            </table>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 1%; text-align: right;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["f start"]}}-{{primer["f start"]+results["homo length"]}}</th> 
+                    <th style='width: 28%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["c start"]}}-{{primer["c start"]+results["homo length"]}}</th>
+                    <th style='width: 28%; text-align: left;'></th>
+                    <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r start"]-results["homo length"]}}-{{primer["r start"]}}</th>
+                    <th style='width: 1%; text-align: left;'></th>
+                    
+                </tr>
+                <tr height="30px">
+                    <th style='width: 1%; text-align: right;'></th>
+                    <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
+                    <th style='width: 28%; text-align: left;'></th>
+                    <th style='width: 14%; text-align: center;'><a href="#control-primer" style="display:block;">control primer</a></th>
+                    <th style='width: 28%; text-align: left;'></th>
+                    <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
+                    <th style='width: 1%; text-align: left;'></th>
+                </tr>
+            </tbody>
+            </table>
+        <h4><a href="#substrate-DNA">Substrate</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 35%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: right;'>homologous</th>
+                    <th style='width: 0.5%; text-align: center;'> </th>
+                    <th style='width: 15%; text-align: left;'> regions</th>
+                    <th style='width: 35%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='width: 35%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th> 
+                    <th style='background-color: {{colors["new_region"]}}; width: 0.5%; text-align: center;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'></th>
+                    <th style='width: 35%; text-align: left;'></th>
+                    
+                </tr>
+            </tbody>
+            </table>
+            <h4><a href="#edited-DNA">Edited DNA</a></h4>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                <tr height="30px">
+                    <th style='width: 35%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: right;'>homologous</th>
+                    <th style='width: 0.5%; text-align: left;'></th>
+                    <th style='width: 15%; text-align: left;'>regions </th>
+                    <th style='width: 35%; text-align: left;'></th>
+                </tr>
+                <tr height="60px">
+                    <th style='background-color: {{colors["background"]}}; width: 35%; text-align: right;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_start-results["homo length"]}}-{{bp_position_start}}</th> 
+                    <th style='background-color: {{colors["new_region"]}}; width: 0.5%; text-align: center;'></th>
+                    <th style='background-color: {{colors["homo"]}}; width: 15%; text-align: center;'>{{bp_position_stop}}-{{bp_position_stop+results["homo length"]}}</th>
+                    <th style='background-color: {{colors["background"]}}; width: 35%; text-align: left;'></th>
+                    
+                </tr>
+            </tbody>
+            </table>
+            <table style='table-layout:fixed;width:100%'>
+                <tbody>
+                    <tr height="30px">
+                        <th style='width: 20%; text-align: right;'></th>
+                        <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'> {{primer["f edited start"]}}-{{primer["f edited start"]+results["homo length"]}}</th> 
+                        <th style='width: 8%; text-align: left;'></th>
+                        <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'> {{primer["e edited start"]}}-{{primer["e edited start"]+results["homo length"]}} </th>
+                        <th style='width: 8%; text-align: left;'></th>
+                        <th style='background-color: {{colors["primer"]}}; width: 14%; text-align: center;'>{{primer["r edited start"]-results["homo length"]}}-{{primer["r edited start"]}} </th>
+                        <th style='width: 20%; text-align: left;'></th>
+                    </tr>
+                    <tr height="30px">
+                        <th style='width: 20%; text-align: right;'></th>
+                        <th style='width: 14%; text-align: center;'><a href="#forward-primer" style="display:block;">F primer</a></th> 
+                        <th style='width: 8%; text-align: left;'></th>
+                        <th style='width: 14%; text-align: center;'><a href="#experiment-primer" style="display:block;">experimental primer</a></th>
+                        <th style='width: 8%; text-align: left;'></th>
+                        <th style='width: 14%; text-align: center;'><a href="#reverse-primer" style="display:block;">R primer</a></th>
+                        <th style='width: 20%; text-align: left;'></th>
+                    </tr>
+            </tbody>
+            </table>
+    {% endif %}
 
-        <hr class="solid">
-        <b> Edited DNA </b>
-        <div id="edited-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['background']}};scrollbar-base-color:#DEBB07;">
-            {{results["edited DNA"]}}
+            <hr class="solid">
+            <b> Substrate </b>
+            <div id="substrate-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['new_region']}};scrollbar-base-color:#DEBB07;">
+                <span>{{results["substrate"]}}</span>
             </div>
-        <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('edited-DNA');">Copy</button></p>
+            <!-- <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('substrate-DNA');">Copy</button></p> -->
+            
+            <hr class="solid">
+            <b> Forward Primer </b>
+            <p>
+                Tm:  {{primer["tm f"]}}&#x2103; <br>
+                Binding Start Location in DNA: {{primer["f start"]}} bps <br>
+                Binding Start Location in Edited DNA: {{primer["f edited start"]}} bp <br>
+                Hairpin DeltaG (Gibbs free energy): {{primer["hairpin f"]}} <br>
+                Heterodimer deltaG with reverse primer (Gibbs free energy): {{primer["hetero f dg"]}}<br>
+            </p>
+            <div id="forward-primer" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['primer']}};scrollbar-base-color:#DEBB07;">
+                {{primer["primer f"]}}
+                </div>
+            <!-- <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('forward-primer');">Copy</button></p> -->
+
+            <hr class="solid">
+
+            <b> Control Primer </b>
+            <p>
+                Tm:  {{primer["tm c"]}}&#x2103; <br>
+                Binding Start Location in DNA: {{primer["c start"]}} bp <br>
+                Hairpin DeltaG (Gibbs free energy): {{primer["hairpin c"]}} <br>
+                Heterodimer deltaG with reverse primer (Gibbs free energy): {{primer["hetero c dg"]}}<br>
+            </p>
+            <div id="control-primer" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['primer']}};scrollbar-base-color:#DEBB07;">
+                {{primer["primer c"]}}
+            </div>
+            <!-- <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('control-primer');">Copy</button></p> -->
+            
+            <hr class="solid">
+            
+            <b> Experiment Primer </b>
+            <p>
+                Tm:  {{primer["tm e"]}}&#x2103; <br>
+                Binding Start Location in Edited DNA: {{primer["e edited start"]}} bp<br>
+                Hairpin DeltaG (Gibbs free energy): {{primer["hairpin e"]}} <br>
+                Heterodimer deltaG with reverse primer (Gibbs free energy): {{primer["hetero e dg"]}}<br>
+            </p>
+            <div id="experiment-primer" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['primer']}};scrollbar-base-color:#DEBB07;">
+                {{primer["primer e"]}}
+            </div>
+            <!-- <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('experiment-primer');">Copy</button></p> -->
+            
+            <hr class="solid">
             
 
-        </div>
-            
-    </div>
+            <b> Reverse Primer </b>
+            <p>
+                Tm:  {{primer["tm r"]}}&#x2103; <br>
+                Binding Start Location in DNA: {{primer["r start"]}} bp <br>
+                Binding Start Location in Edited DNA: {{primer["r edited start"]}} bp<br>
+                Hairpin DeltaG (Gibbs free energy): {{primer["hairpin r"]}} <br>
+            </p>
+            <div id="reverse-primer" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['primer']}};scrollbar-base-color:#DEBB07;">
+                {{primer["primer r"]}}
+                </div>
+            <!-- <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('reverse-primer');">Copy</button></p> -->
 
-{% endif %} 
+            <hr class="solid">
+
+        {% if results["edit type"] == "replacement" or results["edit type"] == "deletion" %}
+            <b> Target Region </b>
+            <div id="region-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['old_region']}};scrollbar-base-color:#DEBB07;">
+                {{results["region"]}}
+                </div>
+            <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('edited-DNA');">Copy</button></p>
+
+            <hr class="solid">
+        {% endif %}
+        {% if results["edit type"] == "replacement" or results["edit type"] == "insertion" %}
+            <b> Template Sequence (input)  </b>
+            <div id="template-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['new_region']}};scrollbar-base-color:#DEBB07;">
+                {{results["template DNA"]}}
+                </div>
+            <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('template-DNA');">Copy</button></p>
+        {% endif %}
+            <b> Original DNA </b>
+            <div id="original-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['background']}};scrollbar-base-color:#DEBB07;">
+                {{results["DNA"]}}
+                </div>
+            <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('edited-DNA');">Copy</button></p>
+            
+
+            <hr class="solid">
+            <b> Edited DNA </b>
+            <div id="edited-DNA" style="line-height:3em;overflow:scroll;padding:5px;background-color:{{colors['background']}};scrollbar-base-color:#DEBB07;">
+                {{results["edited DNA"]}}
+                </div>
+            <p align="right"><button type="button" class="btn btn-secondary" onclick="copy('edited-DNA');">Copy</button></p>
+
+            <hr class="solid">
+            <b>Downloads:</b>
+            &nbsp;<button type="button" class="btn btn-secondary"><a <a style="color:white;" href="/file/{{'{}_{}_PRIMERS_{}.csv'.format(phage, results['edit type'], results['ID'])}}" >All Possible Primer Sets</a></button>
+            &nbsp;&nbsp;<button type="button" class="btn btn-secondary"><a style="color:white;" href="/file/{{phage+'_'+results['edit type']+'_'+results['ID']+'.fasta'}}" >BRED Materials</a></button>
+            <hr class="solid">
+              
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        </div>
+        {% endif %} 
+
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 </body>
 <script> 
-    function load(){
-        var results = {{results|tojson}};
-        document.getElementById("form_gp").style.display = "none";
-        // var edited_DNA = results["edited DNA"];
-        // document.getElementById("edited_DNA").innerHTML = edited_DNA;//results["edited DNA"][:3] + "<span class=\"highlight\">" + results["edited DNA"][:5] + "</span>" + results["edited DNA"][5:];
-    }
     function edit_type_change(edit){
+        location_input_change("")
         if (edit == "replacement") {
             document.getElementById("form_DNA_template").style.display  = "inline";
             document.getElementById("form_location_type").style.display  = "inline";
@@ -562,6 +591,9 @@
             document.getElementById("form_bp_position_stop").style.display  = "inline";
             document.getElementById("form_bp_position_start").style.display  = "inline";
             document.getElementById("bp_position_start_placeholder").innerHTML  = "Start Base Pair";
+            // update orientation input
+            document.getElementById("form_orientation").style.display  = "inline";
+
         }else if (edit == "insertion"){
             document.getElementById("form_DNA_template").style.display  = "inline";
             document.getElementById("form_location_type").style.display  = "none";
@@ -569,6 +601,9 @@
             document.getElementById("form_bp_position_stop").style.display  = "none";
             document.getElementById("form_bp_position_start").style.display  = "inline";
             document.getElementById("bp_position_start_placeholder").innerHTML  = "Insertion Location (bp)";
+            // update orientation input
+            document.getElementById("form_orientation").style.display  = "inline";
+
         }else if (edit == "deletion"){
             document.getElementById("form_DNA_template").style.display  = "none";
             document.getElementById("form_location_type").style.display  = "inline";
@@ -576,6 +611,9 @@
             document.getElementById("form_bp_position_stop").style.display  = "inline";
             document.getElementById("form_bp_position_start").style.display  = "inline";
             document.getElementById("bp_position_start_placeholder").innerHTML  = "Start Base Pair";
+            // update orientation input
+            document.getElementById("form_orientation").style.display  = "none";
+
         }
     }
     function location_input_change(location_type){
@@ -583,10 +621,23 @@
             document.getElementById("form_gp").style.display  = "inline";
             document.getElementById("form_bp_position_stop").style.display = "none";
             document.getElementById("form_bp_position_start").style.display  = "none";
+            document.getElementById("location_type").innerHTML = "<option value='base pair'>base pair (bp)</option>\
+                                                                  <option value='gene product number' selected>gene product number (gp)</option>";
+
+            // update orientation input
+            document.getElementById("orientation_type").innerHTML = "<option value='same' selected>match orientation of chosen gp</option>\
+                                                                     <option value='F'>Forward</option>\
+                                                                     <option value='R'>Reverse</option>";
         }else{
             document.getElementById("form_gp").style.display  = "none";
             document.getElementById("form_bp_position_stop").style.display  = "inline";
             document.getElementById("form_bp_position_start").style.display  = "inline";
+            // update orientation input
+            
+            document.getElementById("location_type").innerHTML = "<option value='base pair' selected>base pair (bp)</option>\
+                                                                  <option value='gene product number'>gene product number (gp)</option>";
+            document.getElementById("orientation_type").innerHTML = "<option value='F' selected>Forward</option>\
+                                                                     <option value='R'>Reverse</option>";
         }
     }
     function copy(id){
@@ -596,6 +647,14 @@
         window.getSelection().addRange(r);
         document.execCommand('copy');
         window.getSelection().removeAllRanges();
+    }
+    function insert_GFP(checkbox){
+        // copied over egfp from static_data 
+        if (checkbox.checked) {
+            document.getElementById("template_DNA").value = "ATGGTGAGCAAGGGCGAGGAGCTGTTCACCGGGGTGGTGCCCATCCTGGTCGAGCTGGACGGCGACGTAAACGGCCACAAGTTCAGCGTGTCCGGCGAGGGCGAGGGCGATGCCACCTACGGCAAGCTGACCCTGAAGTTCATCTGCACCACCGGCAAGCTGCCCGTGCCCTGGCCCACCCTCGTGACCACCCTGACCTACGGCGTGCAGTGCTTCAGCCGCTACCCCGACCACATGAAGCAGCACGACTTCTTCAAGTCCGCCATGCCCGAAGGCTACGTCCAGGAGCGCACCATCTTCTTCAAGGACGACGGCAACTACAAGACCCGCGCCGAGGTGAAGTTCGAGGGCGACACCCTGGTGAACCGCATCGAGCTGAAGGGCATCGACTTCAAGGAGGACGGCAACATCCTGGGGCACAAGCTGGAGTACAACTACAACAGCCACAACGTCTATATCATGGCCGACAAGCAGAAGAACGGCATCAAGGTGAACTTCAAGATCCGCCACAACATCGAGGACGGCAGCGTGCAGCTCGCCGACCACTACCAGCAGAACACCCCCATCGGCGACGGCCCCGTGCTGCTGCCCGACAACCACTACCTGAGCACCCAGTCCGCCCTGAGCAAAGACCCCAACGAGAAGCGCGATCACATGGTCCTGCTGGAGTTCGTGACCGCCGCCGGGATCACTCTCGGCATGGACGAGCTGTACAAGTAA";
+        }else{
+            document.getElementById("template_DNA").value = ""
+        }
     }
 </script>
 

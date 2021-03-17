@@ -115,8 +115,8 @@ class BRED(unittest.TestCase):
         out = find_possible_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, edit_type, template_DNA, primer_length, search_size, True)
         f = all_possible_subsets("bcdefg", primer_length, "f")
         r = all_possible_subsets("tuvwxy", primer_length, "r")
-        c = all_possible_subsets("klmno", primer_length, "c")
-        e = all_possible_subsets("1234567", primer_length, "e")
+        c = all_possible_subsets("jklmno", primer_length, "c")
+        e = all_possible_subsets("j12345", primer_length, "e")
         expected = pd.concat([f, r, c, e])
         self.assertEqual(True, expected.equals(out))
 
@@ -126,13 +126,13 @@ class BRED(unittest.TestCase):
         bp_position = 11
         edit_type = "insertion"
         template_DNA = "1234567"
-        primer_length = 3
+        primer_length = 4
         search_size = 6
         out = find_possible_primers(DNA, edited_DNA, bp_position, bp_position, edit_type, template_DNA, primer_length, search_size, True)
-        f = all_possible_subsets("bcdefg", primer_length, "f")
-        r = all_possible_subsets("uvwxyz", primer_length, "r")
+        f = all_possible_subsets("abcdef", primer_length, "f")
+        r = all_possible_subsets("vwxyz", primer_length, "r")
         c = all_possible_subsets("ijqs", primer_length, "c")
-        e = all_possible_subsets("1234567", primer_length, "e")
+        e = all_possible_subsets("123456", primer_length, "e")
         expected = pd.concat([f, r, c, e])
         self.assertEqual(True, expected.equals(out))
 
@@ -143,12 +143,12 @@ class BRED(unittest.TestCase):
         bp_position_stop = 16
         edit_type = "deletion"
         template_DNA = ""
-        primer_length = 3
+        primer_length = 4
         search_size = 6
         out = find_possible_primers(DNA, edited_DNA, bp_position_start, bp_position_stop, edit_type, template_DNA, primer_length, search_size, True)
-        f = all_possible_subsets("bcdefg", primer_length, "f")
-        r = all_possible_subsets("tuvwxy", primer_length, "r")
-        c = all_possible_subsets("klmno", primer_length, "c")
+        f = all_possible_subsets("abcdef", primer_length, "f")
+        r = all_possible_subsets("uvwxyz", primer_length, "r")
+        c = all_possible_subsets("ijklmn", primer_length, "c")
         e = all_possible_subsets("ijqs", primer_length, "e")
         expected = pd.concat([f, r, c, e])
         self.assertEqual(True, expected.equals(out))
