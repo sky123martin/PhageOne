@@ -76,6 +76,7 @@ def BRED(error = ""):
         template_DNA = edit_form.template_DNA.data
         orientation = edit_form.orientation.data
 
+        print(phage, edit_type, location_type, bp_position_start, bp_position_stop, gp_number, orientation)
         if edit_form.EGFP.data != None and edit_form.EGFP.data:
             template_DNA = eGFP_DNA()
 
@@ -104,8 +105,8 @@ def BRED(error = ""):
                Bred("missing gene product number")
             out = collect_gene_info(phage, gp_number)
             if isinstance(out, str): # if phage is not in DB 
-                    BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
-            elif isinstance(out, int): # if geneproducts is out of bounds
+                BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
+            elif isinstance(out, int): # if gene products is out of bounds
                 if out < gp_number:
                     BRED("Gene product {} is out of bounds, {} has a total of {} genes".format(gp_number, phage, out))
                 else:
