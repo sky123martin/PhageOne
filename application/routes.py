@@ -92,11 +92,6 @@ def BRED(error = ""):
             if gp_number == None:
                 error = "missing gene product number"
             
-        bp_position_start = int(bp_position_start)
-        bp_position_stop = int(bp_position_stop)
-
-        if 200 > bp_position_start:
-             error = "Start position of {} does not leave 200bp upstream buffer needed in order to find suitable primers".format(bp_position_start)
 
         
         if edit_type != "deletion" and template_DNA=="":
@@ -129,6 +124,12 @@ def BRED(error = ""):
                 results["gene number"] = gp_number
                 results["region orientation"] = orientation
 
+        bp_position_start = int(bp_position_start)
+        bp_position_stop = int(bp_position_stop)
+
+        if 200 > bp_position_start:
+             error = "Start position of {} does not leave 200bp upstream buffer needed in order to find suitable primers".format(bp_position_start)
+             
         if phage_info["genome length"]-200 < bp_position_stop:
              error = "Stop position of {} does not leave downstream 200bp buffer needed in order to find suitable primers, genome length is {}".format(bp_position_stop, phage["genome length"])
 
