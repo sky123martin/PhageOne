@@ -23,7 +23,7 @@ def setup_data():
     # download phagesDB info
     download_phage_metadata()
     # download_all_phage_genes()
-    download_all_fastas()
+    # download_all_fastas()
 
 @app.before_request
 def clean_output_data():
