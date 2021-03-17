@@ -231,14 +231,8 @@ def collect_gene_info(phage, gp_num):
     # is gene number is not in list 
     if target_gene_df.empty:
         return genes_df.shape[0]
-
-    start_bp = int(target_gene_df["start"].iloc[0])
-    stop_bp = int(target_gene_df["stop"].iloc[0])
-    function = str(target_gene_df["function"].iloc[0])
-    pham = str(target_gene_df["pham"].iloc[0])
-    orientation = str(target_gene_df["orientation"].iloc[0])
     
-    return start_bp, stop_bp, pham, function, orientation
+    return target_gene_df.iloc[0].to_dict()
 
 def collect_phage_info(phage):
     """ Collect phage info from metadata file """

@@ -84,29 +84,24 @@ def BRED(error = ""):
 
         if location_type == "base pair":
             if bp_position_start == None or bp_position_stop == None:
-                error = "Missing start or stop bound on location"
+                Bred("Missing start or stop bound on location")
             elif bp_position_start <= 0 or  bp_position_stop <= 0:
-                error = "base pair must be non-negative"
+                Bred("base pair must be non-negative")
             elif bp_position_start>bp_position_stop:
-                error = "start bp larger than stop bp"
-
-        elif location_type == "gene product number":
-            if gp_number == None:
-                error = "missing gene product number"
+                Bred("start bp larger than stop bp")
         
         if edit_type != "deletion" and template_DNA=="":
-            error = "Empty template DNA input"
+            Bred("Empty template DNA input")
 
         phage_info = collect_phage_info(phage)
 
         if isinstance(phage_info, str):
-            error = "Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage)
-
-        if error != "":
-            return render_template("BRED.html", results = results, phage = phage, primer = {}, bp_position_start = bp_position_start, bp_position_stop = bp_position_stop, gp_number = gp_number, template_DNA = template_DNA, error = error, edit_form = edit_form, colors = colors)
+            Bred("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
 
         # if gene product is used to location convert to bps
         if location_type == "gene product number":
+            if gp_number == None:
+               Bred("missing gene product number")
             out = collect_gene_info(phage, gp_number)
             if isinstance(out, str): # if phage is not in DB 
                     BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
@@ -117,41 +112,37 @@ def BRED(error = ""):
                     BRED("Gene product {} is not a valid gene product (could be labeled as mRNA)".format(gp_number))
             else:
                 # if gene is found unpack object
-                bp_position_start, bp_position_stop, pham, function, orientation = out
-                results["pham"] = pham
-                results["function"] = function[2:-1]
-                results["gene number"] = gp_number
-                results["region orientation"] = orientation
-                print(bp_position_start, bp_position_stop)
-        print(bp_position_start, bp_position_stop)
+                bp_position_start = out["start"]
+                bp_position_stop = out["stop"]
+                results["pham"] = out["pham"]
+                results["function"] = out["function"]
+                results["gene number"] = out["gene number"]
+                results["region orientation"] = out["orientation"]
+
         bp_position_start = int(bp_position_start)
         bp_position_stop = int(bp_position_stop)
 
+        # check if position has buffer upstream and downstream
         if 200 > bp_position_start:
-             error = "Start position of {} does not leave 200bp upstream buffer needed in order to find suitable primers".format(bp_position_start)
-             
-        if phage_info["genome length"]-200 < bp_position_stop:
-             error = "Stop position of {} does not leave downstream 200bp buffer needed in order to find suitable primers, genome length is {}".format(bp_position_stop, phage["genome length"])
+             BRED("Start position of {} does not leave 200bp upstream buffer needed in order to find suitable primers".format(bp_position_start))
+        elif phage_info["genome length"]-200 < bp_position_stop:
+             BRED("Stop position of {} does not leave downstream 200bp buffer needed in order to find suitable primers, genome length is {}".format(bp_position_stop, phage["genome length"]))
 
         # check if template DNA is valid DNA sequence
         if template_DNA.replace("A","").replace("T","").replace("G","").replace("C","") != "":
-            error = "Unknown character found in input template DNA"
+            BRED("Unknown character found in input template DNA")
 
+        # Check if deletion
         if edit_type != "deletion" and orientation=="":
             error = "orientation not specified"
         elif orientation=="R" or (orientation=="Same" and results["region orientation"]=="R"):
             template_DNA = reverse(complement(template_DNA))
-
-        
-        if error != "":
-            return render_template("BRED.html", results = results, primer = {}, phage = phage, bp_position_start = bp_position_start, bp_position_stop = bp_position_stop, gp_number = gp_number, template_DNA = template_DNA, error = error, edit_form = edit_form, colors = colors)
 
         # retrieve phage DNA
         DNA = fasta_to_DNA(phage)
 
         # find substrate and edit DNA sequence
         substrate, edited_DNA = find_editing_substrate(DNA, bp_position_start, bp_position_stop, template_DNA)
-
 
         # find primers
         results["ID"] = process_id = str(random.randint(0,sys.maxsize))
