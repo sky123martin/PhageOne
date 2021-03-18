@@ -171,7 +171,9 @@ def BRED(error=""):
 
         BRED_to_fasta(results["ID"], phage, results["edit type"], results["substrate"], primer)
         
-        return render_template("BRED.html", results = results, primer = primer, phage = phage, bp_position_start = bp_position_start, bp_position_stop = bp_position_stop, gp_number = "", template_DNA = template_DNA, error = error, edit_form = edit_form, colors = colors)
+        phage_photo_url = phage_photo(phage)
+
+        return render_template("BRED.html", results = results, primer = primer, phage = phage, bp_position_start = bp_position_start, bp_position_stop = bp_position_stop, gp_number = "", template_DNA = template_DNA, error = error, edit_form = edit_form, colors = colors, phage_photo_url = phage_photo_url)
         
     return render_template("BRED.html", results = results, primer = {}, phage = phage, bp_position_start = bp_position_start, bp_position_stop = bp_position_stop, gp_number = gp_number, template_DNA = template_DNA, error = error, edit_form = edit_form, colors = colors)
 

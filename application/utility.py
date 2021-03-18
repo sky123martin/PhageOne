@@ -25,6 +25,27 @@ class Error(Exception):
 class PrimerNotFound(Error):
     """Raised when primer set is unable to be found"""
     pass
+
+def phage_photo(phage):
+    query_url = "https://phagesdb.org/api/phages/{}".format(phage)
+    r = requests.get(url = query_url)
+
+    phage_photo_url = ""
+    if r.status_code != 404:
+        response = r.json()
+        if response["em_thumb_file"] is not None:
+            phage_photo_url = response["em_thumb_file"]
+        elif response["plaque_thumb_file"] is not None:
+            phage_photo_url = response["plaque_thumb_file"]
+        elif response["morphotype"] == "SIPHO":
+            phage_photo_url = "../static/SIPHO.png"
+        elif response["morphotype"] == "MYO":
+            phage_photo_url = "../static/MYO.png"
+        elif response["morphotype"] == "PODO":
+            phage_photo_url = "../static/PODO.png"
+    else:
+        phage_photo_url = "../static/MYO.png"
+    return phage_photo_url
  
 def BRED_to_fasta(ID, phage, edit_type, substrate, primer):
     f = open('output/{}_{}_{}.fasta'.format(phage, edit_type, ID), 'w')
