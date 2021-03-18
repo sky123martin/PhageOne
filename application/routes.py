@@ -44,7 +44,7 @@ def download_file(file_name):
         return BRED(">30 minutes has passed since original request, please rerun search to have access to files")
 
 @app.route('/BRED', methods=['GET', 'POST'])
-def BRED(error = ""):
+def BRED(error=""):
     # <h3>Subcluster: <a href="https://phagesdb.org/subclusters/{{phage_info['subcluster']}}/">{{phage_info['subcluster']}}</a></h3>
     # <h3>Cluster: <a href="https://phagesdb.org/clusters/{{phage_info['cluster']}}/">{{phage_info['subcluster']}}</a></h3>
     # <h3>Cluster Lifecycle: <a href="https://phagesdb.org/glossary/#{{phage_info['Cluster Life']}}/">{{phage_info['subcluster']}}</a></h3>
@@ -65,7 +65,7 @@ def BRED(error = ""):
     gp_number = ""
     template_DNA = ""
 
-    if request.method == 'POST' and edit_form.validate_on_submit(): # receive deletion inputs
+    if request.method == 'POST' and edit_form.validate_on_submit() and error == "": # receive deletion inputs
         # extract inputs out of form submission
         phage = edit_form.phage.data
         edit_type = edit_form.edit_type.data
@@ -76,41 +76,38 @@ def BRED(error = ""):
         template_DNA = edit_form.template_DNA.data
         orientation = edit_form.orientation.data
 
-        print(phage, edit_type, location_type, bp_position_start, bp_position_stop, gp_number, orientation)
+        input_str = "phage:{}, edit_type:{}, location_type:{}, bp_position_start:{}, bp_position_stop:{}, gp_number:{}, orientation:{}".format(phage, edit_type, location_type, bp_position_start, bp_position_stop, gp_number, orientation)
+        print(input_str)
+        #app.logger.info(input_str)
+        
         if edit_form.EGFP.data != None and edit_form.EGFP.data:
             template_DNA = eGFP_DNA()
 
         if edit_type == "insertion":
             bp_position_stop = bp_position_start
 
-        if location_type == "base pair":
-            if bp_position_start == None or bp_position_stop == None:
-                BRED("Missing start or stop bound on location")
-            elif bp_position_start <= 0 or  bp_position_stop <= 0:
-                BRED("base pair must be non-negative")
-            elif bp_position_start>bp_position_stop:
-                BRED("start bp larger than stop bp")
-        
+
         if edit_type != "deletion" and template_DNA=="":
             BRED("Empty template DNA input")
 
         phage_info = collect_phage_info(phage)
-
+        print(phage_info)
         if isinstance(phage_info, str):
-            BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
+            return BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
+
 
         # if gene product is used to location convert to bps
         if location_type == "gene product number":
             if gp_number == None:
-               BRED("missing gene product number")
+               return BRED("missing gene product number")
             out = collect_gene_info(phage, gp_number)
             if isinstance(out, str): # if phage is not in DB 
-                BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
+                return BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
             elif isinstance(out, int): # if gene products is out of bounds
                 if out < gp_number:
-                    BRED("Gene product {} is out of bounds, {} has a total of {} genes".format(gp_number, phage, out))
+                    return BRED("Gene product {} is out of bounds, {} has a total of {} genes".format(gp_number, phage, out))
                 else:
-                    BRED("Gene product {} is not a valid gene product (could be labeled as mRNA)".format(gp_number))
+                    return BRED("Gene product {} is not a valid gene product (could be labeled as mRNA)".format(gp_number))
             else:
                 # if gene is found unpack object
                 bp_position_start = int(out["start"])
@@ -119,16 +116,25 @@ def BRED(error = ""):
                 results["function"] = out["function"]
                 results["gene number"] = out["gene number"]
                 results["region orientation"] = out["orientation"]
+        elif location_type == "base pair":
+            if bp_position_start == None or bp_position_stop == None:
+                return BRED("Missing start or stop bound on location")
+            elif bp_position_start <= 0 or  bp_position_stop <= 0:
+                return BRED("base pair must be non-negative")
+            elif bp_position_start>bp_position_stop:
+                return BRED("start bp larger than stop bp")
+            elif bp_position_start==bp_position_stop and edit_type == "replacement":
+                return BRED("start bp equals stop, try the insertion method instead")
 
         # check if position has buffer upstream and downstream
         if 200 > bp_position_start:
-             BRED("Start position of {} does not leave 200bp upstream buffer needed in order to find suitable primers".format(bp_position_start))
+             return BRED("Start position of {} does not leave 200bp upstream buffer needed in order to find suitable primers".format(bp_position_start))
         elif phage_info["genome length"]-200 < bp_position_stop:
-             BRED("Stop position of {} does not leave downstream 200bp buffer needed in order to find suitable primers, genome length is {}".format(bp_position_stop, phage["genome length"]))
+             return BRED("Stop position of {} does not leave downstream 200bp buffer needed in order to find suitable primers, genome length is {}".format(bp_position_stop, phage["genome length"]))
 
         # check if template DNA is valid DNA sequence
         if template_DNA.replace("A","").replace("T","").replace("G","").replace("C","") != "":
-            BRED("Unknown character found in input template DNA")
+            return BRED("Unknown character found in input template DNA")
 
         # Check if deletion
         if edit_type != "deletion" and orientation=="":

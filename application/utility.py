@@ -240,7 +240,7 @@ def collect_phage_info(phage):
     target = phage_df[phage_df["phage"]==phage]
 
     if target.empty:
-        return ""
+        return "phage not found"
 
     return target.iloc[0].to_dict()
 
