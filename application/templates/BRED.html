@@ -675,10 +675,10 @@
         edit_type_change("replacement")
         location_input_change("gene product number")
         document.getElementById("phage").value = "RedRock"
-        document.getElementById("gp_number").value = "12"
+        document.getElementById("gp_number").value = "11"
         document.getElementById("EGFP_check").checked = true;
         insert_GFP(document.getElementById("EGFP_check"))
-        document.getElementById("sample_explain").innerHTML = "<br> Note: We are replacing the lysin A with eGFP in the same orientation as the lysin A so the eGFP can utilize the lysin A's promotor. This edit is used to make the phage an indicator for bacterial presence but not to replicate/kill the bacteria. "
+        document.getElementById("sample_explain").innerHTML = "<br> Note: We are replacing the lysin A, gp 11, with eGFP in the same orientation as the lysin A so the eGFP can utilize the lysin A's promotor. This edit is used to make the phage an indicator for bacterial presence but not to replicate/kill the bacteria. "
     }
     function test_insertion(){
         edit_type_change("insertion")
@@ -686,14 +686,14 @@
         document.getElementById("bp_position_start").value = "43068"
         document.getElementById("EGFP_check").checked = true;
         insert_GFP(document.getElementById("EGFP_check"))
-        document.getElementById("sample_explain").innerHTML = "<br> Note:We are inserting eGFP directly after the Lysin B gene (43068bp) which has a forward orientation, if we add a ribosomal binding site to this eGFP then it can be expressed with the Lysin B protein."
+        document.getElementById("sample_explain").innerHTML = "<br> Note: We are inserting eGFP directly after the Lysin B gene (43068bp) which has a forward orientation, if we add a ribosomal binding site to this eGFP then it can be expressed with the Lysin B protein."
     }
     function test_deletion(){
         edit_type_change("deletion")
         location_input_change("gene product number")
         document.getElementById("phage").value = "AbbyPaige"
-        document.getElementById("gp_number").value = "32"
-        document.getElementById("sample_explain").innerHTML = "<br> Note: We are deleting gene 35 the integrase of AbbyPaige. We would expect this edit to make the phage lytic because it will lose its ability to integrate into the host's genome."
+        document.getElementById("gp_number").value = "34"
+        document.getElementById("sample_explain").innerHTML = "<br> Note: We are deleting gene 34 the integrase of AbbyPaige. We would expect this edit to make the phage lytic because it will lose its ability to integrate into the host's genome."
         
     }
 </script>
