@@ -91,7 +91,6 @@ def BRED(error=""):
             BRED("Empty template DNA input")
 
         phage_info = collect_phage_info(phage)
-        print(phage_info)
         if isinstance(phage_info, str):
             return BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
 
