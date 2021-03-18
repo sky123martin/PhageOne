@@ -85,24 +85,24 @@ def BRED(error = ""):
 
         if location_type == "base pair":
             if bp_position_start == None or bp_position_stop == None:
-                Bred("Missing start or stop bound on location")
+                BRED("Missing start or stop bound on location")
             elif bp_position_start <= 0 or  bp_position_stop <= 0:
-                Bred("base pair must be non-negative")
+                BRED("base pair must be non-negative")
             elif bp_position_start>bp_position_stop:
-                Bred("start bp larger than stop bp")
+                BRED("start bp larger than stop bp")
         
         if edit_type != "deletion" and template_DNA=="":
-            Bred("Empty template DNA input")
+            BRED("Empty template DNA input")
 
         phage_info = collect_phage_info(phage)
 
         if isinstance(phage_info, str):
-            Bred("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
+            BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
 
         # if gene product is used to location convert to bps
         if location_type == "gene product number":
             if gp_number == None:
-               Bred("missing gene product number")
+               BRED("missing gene product number")
             out = collect_gene_info(phage, gp_number)
             if isinstance(out, str): # if phage is not in DB 
                 BRED("Input phage '{}' is not in the phagesDB, check name spelling and sequenced status".format(phage))
@@ -113,15 +113,12 @@ def BRED(error = ""):
                     BRED("Gene product {} is not a valid gene product (could be labeled as mRNA)".format(gp_number))
             else:
                 # if gene is found unpack object
-                bp_position_start = out["start"]
-                bp_position_stop = out["stop"]
+                bp_position_start = int(out["start"])
+                bp_position_stop = int(out["stop"])
                 results["pham"] = out["pham"]
                 results["function"] = out["function"]
                 results["gene number"] = out["gene number"]
                 results["region orientation"] = out["orientation"]
-
-        bp_position_start = int(bp_position_start)
-        bp_position_stop = int(bp_position_stop)
 
         # check if position has buffer upstream and downstream
         if 200 > bp_position_start:
