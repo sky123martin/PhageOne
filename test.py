@@ -218,8 +218,8 @@ class BRED(unittest.TestCase):
 
         self.assertEqual(network, target)
 
-        network = editing_guide_synteny("D29")
-        self.assertEqual(len(network["nodes"])>0,True)
+        # network = editing_guide_synteny("D29")
+        # self.assertEqual(len(network["nodes"])>0,True)
 
 
 
