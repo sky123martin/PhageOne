@@ -14,19 +14,6 @@ import json
 
 from application import utility
 
-@app.before_first_request
-def setup_data():
-    # make data directory
-    proc = subprocess.check_call("mkdir -p data", shell=True)
-    proc = subprocess.check_call("mkdir -p data/fasta_files", shell=True)
-    proc = subprocess.check_call("mkdir -p data/genes_by_phage", shell=True)
-    proc = subprocess.check_call("mkdir -p output", shell=True)
-
-    # download phagesDB info
-    download_phage_metadata()
-    # download_all_phage_genes()
-    # download_all_fastas()
-
 @app.before_request
 def clean_output_data():
     proc = subprocess.check_call("find output -type f -mmin +30 -delete", shell=True) # delete files in output that are >30 minutes old
@@ -181,7 +168,18 @@ def BRED(error=""):
 @app.route('/EditingGuide', methods=['GET', 'POST'])
 def EditingGuide(error = ""):
     form = editing_guide_form()
-    return render_template("EditingGuide.html", error=error)
+    if request.method == 'POST' and form.validate_on_submit() and error == "": # receive deletion inputs
+        phage = form.phage.data
+        return redirect('/EditingGuide/{}'.format(phage))
+
+
+    return render_template("EditingGuide.html", form = form, error=error)
+
+@app.route('/EditingGuide/<phage>', methods=['GET', 'POST'])
+def EditingGuideResults(phage):
+    print(phage)
+    network = editing_guide_synteny(phage)
+    return render_template("EditingGuidesResults.html", phage=phage,synteny_edges=network["links"], synteny_nodes=network["nodes"])
 
 @app.route('/GenomeSynteny', methods=['GET', 'POST'])
 def GenomeSynteny(error = ""):

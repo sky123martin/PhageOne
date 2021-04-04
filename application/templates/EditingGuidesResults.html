@@ -1,0 +1,281 @@
+<html>
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>PhageOne: Editing Guide</title>
+    <link rel="icon" href="../static/PhageOneLogo.jpg">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    
+    
+  </head>
+<body onload="createArcDiagram();">
+  <br>
+
+ <div class="container" style="width: 100%;">
+  <ul class="nav nav-tabs">
+    <li class="nav-item">
+      <a class="nav-link" href="{{ url_for('home') }}">PhageOne</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link active" aria-current="page" href="{{ url_for('EditingGuide') }}">Editing Guides</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{{ url_for('BRED') }}">BRED Material Generator</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{{ url_for('GenomeSynteny') }}">Genome Synteny</a>
+    </li>
+
+  </ul>
+
+ <br><br><br><br>
+ <h1>Editing Guides for {{phage}}</h1>
+ <br><br>
+<h3>Synteny Map</h3>
+  <div id = "synteny_viz"></div>
+
+<h3>Dependency Matrix</h3>
+<div id = "dependency_viz"></div>
+ </div>
+ <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<script src="https://d3js.org/d3.v4.js"></script>
+ <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+ <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+ </body>
+<script> 
+
+function createArcDiagram() {
+    // Parse the Data
+    var nodes = {{synteny_nodes| safe }};
+    var edges = {{synteny_edges| safe }};
+
+    var nodeHash = {};
+    nodes.forEach((node) => {
+        nodeHash[node.id] = node;
+        node.x = parseInt(node.position);
+    })
+    edges.forEach(edge => {
+        edge.count = edge.weight;
+        edge.weight = parseInt(edge.weight);
+        edge.source = nodeHash[edge.source];
+        edge.target = nodeHash[edge.target];
+    })
+
+   var margin = {top: 20, right: 20, bottom: 20, left: 20},
+    width = nodes.length*51 - margin.left - margin.right,
+    height = nodes.length*9 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    var arcG = d3.select("#synteny_viz")
+        .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+            .attr("transform",
+                "translate(" + margin.left + "," + margin.top + ")");
+
+    // List of node names
+    var positions = nodes.map(function(d){return d.position})
+
+    // A linear scale to position the nodes on the X axis
+    var x = d3.scaleLinear()
+        .range([0, width])
+        .domain([0, d3.max(nodes, function(d) { return +d.position;} )])
+
+    var nsize = d3.scaleLinear()//.scaleSqrt()
+        .range([5, 16])
+        .domain([1,d3.max(nodes, function(d) { return +d.count;} )])
+
+    var esize = d3.scaleLinear()
+        .range([0.5,20])
+        .domain([1,d3.max(edges, function(d) { return d.count;} )])
+
+    var archeight = d3.scaleLinear()
+        .range([1,height+100])
+        .domain([1, d3.max(nodes, function(d) { return +d.position;} )])
+
+
+    var xaxis = height/2+10;
+
+          // create a tooltip
+    var Tooltip = d3.select("#synteny_viz")
+        .append("div")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+        .style("width",  220)
+
+    var mylinks = arcG.selectAll("path")
+                            .data(edges)
+                            .enter()
+                            .append("path")
+                            .attr("class", "arc")
+                            .style("fill", "none")
+                            .attr("stroke", "grey")
+                            .style("stroke-width", function(d){ return(esize(d.count))})
+                            .style("opacity", 0.4)
+                            .attr("d", arc)
+
+     var mynodes = arcG.selectAll("circle")
+                            .data(nodes)
+                            .enter()
+                            .append("circle")
+                            .attr("class", "node")
+                            .attr("r", function(d){ return(nsize(d.count))})
+                            .attr("cy", xaxis)
+                            .attr("cx", function(d){ return(x(d.position))})
+                            .style('opacity', 1)
+                            .style('fill', 'grey')
+
+      // And give them a label
+    var mylabels = arcG
+        .selectAll("mylabels")
+        .data(nodes)
+        .enter()
+        .append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text(function(d){
+            if(d.function=="NKF"){
+                return ""
+            }
+            return(d.function)} )
+        .style("text-anchor", "end")
+        .attr("transform", function(d){ return( "translate(" + (x(d.position)) + "," + (xaxis+20) + ")rotate(-45)")})
+        .style("font-size", 8)
+
+    var gplabels = arcG
+        .selectAll("gplabels")
+        .data(nodes)
+        .enter()
+        .append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text(function(d){return d.position} )
+        .style("text-anchor", "middle")
+        .attr("transform", function(d){ return( "translate(" + (x(d.position)) + "," + (xaxis+2) + ")rotate(0)")})
+        .style("font-size", function(d){return 6+nsize(d.count)/3} )
+        .style("fill","white")
+
+    var probabiltylabels = arcG
+        .selectAll("myprobabilty")
+        .data(edges)
+        .enter()
+        .append("text")
+        .attr("x", function(d){return (x(d.source.position) + x(d.target.position)) / 2 -5;})
+        .attr("y",  function(d){
+                var mod = archeight(d.source.position - d.target.position)
+                var p = 0.94
+                if(mod<0){
+                    mod = -Math.pow(-mod,p)-5
+                }else{
+                    mod = Math.pow(mod,p)+5
+                }
+                return xaxis + mod; })
+        .text(function(d){
+            var p =  Math.round(d.count/d.source.count*100)/100;
+            if(p==0){
+                return "<0.01"
+            }else{
+                return p
+            }} )
+        .style("text-anchor", "middle")
+        .style("opacity",0)
+        .style("font-size", 10)
+        
+    mylinks
+    .on('mouseover', function (d) {
+        mynodes
+            .style('fill', function (node_d) { return d.source.id === node_d.id || d.target.id === node_d.id? "#69b3a2" : 'lightgrey';})
+        probabiltylabels 
+            .style('opacity', function (link_d) {return link_d.source.id === d.source.id & link_d.target.id === d.target.id? 1 : 0;})
+        Tooltip
+            .style("opacity", 1)
+            .html("<b>Edge Info</b>: <br>Upstream gp #:"+d.source.position+"<br> Downstream gp #: "+d.target.position+"<br> Probabilty of Adjaceny: " +Math.round(d.count/d.source.count*100)/100+"<br> # Genomes: " + d.count)
+            .style("left", (d3.mouse(this)[0]) + "px")
+            .style("top", (d3.mouse(this)[1]) + "px")
+    })
+    .on('mouseout', function (d) {
+        mynodes
+            .style('opacity', 1)
+            .style('fill', 'grey')
+        mylinks
+            .style('stroke', 'grey')
+            .style('stroke-opacity', .7)
+            .style("stroke-width", function(d){ return(esize(d.count))})
+        probabiltylabels 
+            .style('opacity',0)
+        Tooltip
+            .style("opacity", 0)
+
+    })
+
+    mynodes
+    .on('mouseover', function (d) {
+      // Highlight the nodes: every node is green except of him
+        mynodes
+            .style('fill', 'lightgrey')
+            d3.select(this)
+            .style('fill', "#69b3a2")
+
+        var nodesToHighlight = edges.map(function (e) { return e.source === d ? e.target : e.target === d ? e.source : 0}).filter(function (d) { return d; });
+        mynodes.filter(function (d) { return nodesToHighlight.indexOf(d) >= 0; })
+            .style('fill', '#555');
+        // Highlight the connections
+        mylinks
+            .style('stroke', function (link_d) { return link_d.source.id === d.id || link_d.target.id === d.id? "#69b3a2" : 'lightgrey';})
+            .style('stroke-opacity', function (link_d) {return link_d.source.id === d.id || link_d.target.id === d.id? 1 : 0.5;})
+        probabiltylabels 
+            .style('opacity', function (link_d) {return link_d.source.id === d.id || link_d.target.id === d.id? 1 : 0;})
+        Tooltip
+            .style("opacity", 1)
+            .html("<b>Node Info</b> <br>Gene Product #"+d.position+"<br> Pham: "+d.pham+"<br> Annotated Function: " + d.function +"<br> # Genomes: " + d.count)
+            .style("left", (d3.mouse(this)[0]) + "px")
+            .style("top", (d3.mouse(this)[1]) + "px")
+
+
+    //   labels
+    //     .style("font-size", function(label_d){ return label_d.name === d.name ? 16 : 2 } )
+    //     .attr("y", function(label_d){ return label_d.name === d.name ? 10 : 0 } )
+
+    })
+    .on('mouseout', function (d) {
+        mynodes
+            .style('opacity', 1)
+            .style('fill', 'grey')
+        mylinks
+            .style('stroke', 'grey')
+            .style('stroke-opacity', .9)
+            // .style("stroke-width", function(d){ return(esize(d.count))})
+        probabiltylabels 
+            .style('opacity',0)
+        Tooltip
+            .style("opacity", 0)
+
+    })
+
+
+   function arc(d) {
+     var draw = d3.line().curve(d3.curveBasis)
+     var sx = x(d.source.position)
+     var tx = x(d.target.position)
+     var midX = (sx + tx) / 2
+     var midY = ((xaxis)+archeight(d.source.position - d.target.position))
+    //  if((d.target.position-d.source.position)==1){
+    //      midY = height-30
+    //  }
+     return draw([[sx,xaxis],[midX,midY],[tx,xaxis]])
+    }
+ }
+
+
+</script>
+
+</html>

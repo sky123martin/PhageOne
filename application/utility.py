@@ -5,6 +5,7 @@ import pickle
 import primer3
 import pandas as pd
 import numpy as np 
+import networkx as nx
 import random
 import subprocess
 import time
@@ -25,6 +26,32 @@ class Error(Exception):
 class PrimerNotFound(Error):
     """Raised when primer set is unable to be found"""
     pass
+
+def setup_data():
+    # make data directory
+    proc = subprocess.check_call("mkdir -p data", shell=True)
+    proc = subprocess.check_call("mkdir -p data/fasta_files", shell=True)
+    proc = subprocess.check_call("mkdir -p data/genes_by_phage", shell=True)
+    proc = subprocess.check_call("mkdir -p data/networks", shell=True)
+    proc = subprocess.check_call("mkdir -p output", shell=True)
+
+    # download phagesDB info
+    app.logger.info("downloading phage metadata..")
+    download_phage_metadata()
+    app.logger.info("downloading phage genes...")
+    download_all_phage_genes()
+    app.logger.info("downloading phage fastas...")
+    download_all_fastas()
+
+    # create synteny network
+    app.logger.info("creating synteny network...")
+    generate_synteny_network()
+
+    # create dependency network
+    app.logger.info("creating dependency network...")
+    generate_dependency_network()
+
+    app.logger.info("FINISHED SETUP")
 
 def phage_photo(phage):
     query_url = "https://phagesdb.org/api/phages/{}".format(phage)
@@ -143,7 +170,7 @@ def download_phage_genes(phage):
     query_url = "https://phagesdb.org/api/genesbyphage/{}/".format(phage)
 
     try:
-        if not path.isfile("data/genes_by_phage/{}_genes.csv".format(phage)):
+        if not path.isfile("data/genes_by_phage/{}.csv".format(phage)):
             response = requests.get(url = query_url).json()['results']
             df = pd.DataFrame(response)
 
@@ -163,14 +190,14 @@ def download_phage_genes(phage):
                                 'Notes':'uncleaned function'
                                 }, inplace = True)
                                 
-            df = df[['gene ID','pham','function','translation','orientation','phage','gene number','start','stop','uncleaned function']]
-            df.to_csv("data/genes_by_phage/{}_genes.csv".format(phage))
+            df = df[['gene ID','pham','function','orientation','phage','gene number','start','stop','uncleaned function']]
+            df.to_csv("data/genes_by_phage/{}.csv".format(phage), index=False)
             return df
         else:
-            return pd.read_csv("data/genes_by_phage/{}_genes.csv".format(phage))
+            return pd.read_csv("data/genes_by_phage/{}.csv".format(phage))
     except: # if phage has no genes df then edit the metadata csv and return empty DF
         phage_df = pd.read_csv("data/phage_metadata.csv")
-        phage_df[phage_df["phage"]!=phage].to_csv("data/phage_metadata.csv")
+        phage_df[phage_df["phage"]!=phage].to_csv("data/phage_metadata.csv", index=False)
         return pd.DataFrame(columns=['gene ID','pham','function','translation','orientation','phage','gene number','start','stop','uncleaned function'])
 
 def download_all_phage_genes():
@@ -184,13 +211,11 @@ def download_all_phage_genes():
         phage_df = pd.read_csv(meta_file_path)
         phages = phage_df["phage"].unique()
 
-        proc = subprocess.check_call("mkdir -p data/genes_by_phage", shell=True)
-
-        with Pool(multiprocessing.cpu_count()-2) as p:  # to check multiprocessing.cpu_count()
+        with Pool(app.config["PROCESSES"]) as p:  # to check multiprocessing.cpu_count()
             output_dfs = p.map(download_phage_genes, phages)
 
         all_phages_genes_df = pd.concat(output_dfs)
-        all_phages_genes_df.to_csv("data/cleaned_gene_list.csv")
+        all_phages_genes_df.to_csv("data/cleaned_gene_list.csv", index=False)
 
 def download_phage_fasta(phage):
     """ Download phage fasta from phagesDB """
@@ -221,12 +246,139 @@ def eGFP_DNA():
     DNA = ''.join(f.read().split("\n")[1:]).replace(" ","")
     return DNA
 
+#########################
+#### Editing Guides #####
+#########################
+def editing_guide_synteny(phage, network=None, phage_genes=None):
+    if network==None:
+        network = nx.read_gml("data/networks/synteny___")
+
+    if not isinstance(phage_genes, pd.DataFrame):
+        phage_genes = pd.read_csv("data/genes_by_phage/{}.csv".format(phage))
+
+    phage_network = network.subgraph([str(i) for i in phage_genes["pham"].unique()])
+    for _, row in phage_genes.iterrows():
+        phage_network.nodes[str(row["pham"])]["position"] = row["gene number"]
+        phage_network.nodes[str(row["pham"])]["function"] = row["function"]
+        phage_network.nodes[str(row["pham"])]["pham"] = row["pham"]
+
+    return nx.node_link_data(phage_network)
+
+def dependency_editing_guide(phage, temperate="", cluster="", morphotype=""):
+    pass
+
+def morphotype_editing_guide(phage, temperate="", cluster="", morphotype=""):
+    pass
+
+############################
+#### Generate Networks #####
+############################
+
+def generate_synteny_network(temperate="", cluster="", morphotype=""):
+    """ Create a synteny network given a subset of phages by cluster or morphology, node weight is number of apperances and edge weight is p i->j """
+    filepath = "data/networks/synteny_{}_{}_{}".format(temperate, cluster, morphotype)
+    if not path.isfile(filepath):
+        df_phages = pd.read_csv("data/phage_metadata.csv")
+        df_genes = pd.read_csv("data/cleaned_gene_list.csv")
+        gene_identifier = "pham"
+        phages = df_phages["phage"].unique()
+
+        # all unique labels, ie functions or phams
+        labels = ["5' start"] + [ident for ident in np.sort(df_genes[gene_identifier].unique())] + ["3' end"]
+        label_to_index = { labels[i]:i for i in range(len(labels))} # conversion to index for transition matrix
+
+        # initialize transition matrix for counts
+        transition_counts = np.zeros((len(labels),len(labels)))
+
+        # for all phages, then for all genes in the phage add counts
+        for phage in phages:
+            phage_df = df_genes[df_genes["phage"] == phage].sort_values(by=['gene number'])
+            i = label_to_index["5' start"]
+            for index, row in phage_df.iterrows(): 
+                j = label_to_index[row[gene_identifier]]
+                transition_counts[i][j] += 1
+                i = j
+            transition_counts[i][label_to_index["3' end"]] += 1
+            
+        # use count matrix to probabilties by dividing by row
+        # transition_matrix = np.zeros((len(labels),len(labels)))
+        # for i in range(len(labels)):
+        #     sum_row = np.sum(transition_counts[i][:])
+        #     transition_matrix[i][:] = transition_counts[i][:]/(sum_row if sum_row > 0 else 1)
+
+        G_markov = nx.from_numpy_matrix(transition_counts, create_using=nx.DiGraph)
+        index_to_label = {index:pham for pham,index in label_to_index.items()}
+        G_markov = nx.relabel_nodes(G_markov, index_to_label)
+
+        df_counts = df_genes.groupby(gene_identifier,as_index=False).count()
+
+        for node in G_markov.nodes():
+            if node not in ["5' start","3' end"]:
+                G_markov.nodes[node]["count"] = df_counts[df_counts[gene_identifier]==node]["gene ID"].values[0]
+        
+        G_markov.nodes["5' start"]["count"] = len(phages)
+        G_markov.nodes["3' end"]["count"] = len(phages)
 
 
-####################################
-#### Generate Synteny Networks #####
-####################################
+        nx.write_gml(G_markov, filepath, stringizer = str)
 
+def generate_dependency_network(temperate="", cluster="", morphotype=""):
+    """ Create a synteny network given a subset of phages by cluster or morphology, node weight is number of apperances and edge weight is p i->j """
+    filepath_dep = "data/networks/dependency_{}_{}_{}".format(temperate, cluster, morphotype)
+    filepath_occ = "data/networks/co_occurrence_{}_{}_{}".format(temperate, cluster, morphotype)
+    if not path.isfile(filepath_dep) or not path.isfile(filepath_occ):
+        df_phages = pd.read_csv("data/phage_metadata.csv")
+        df_genes = pd.read_csv("data/cleaned_gene_list.csv")
+        gene_identifier = "pham"
+        phages = df_phages["phage"].unique()
+
+        # intialize co-occurance graph
+        G_co = nx.Graph()
+
+        # go through each unique gene indet and add node with attributes
+        for gene in df_genes[gene_identifier].unique():
+            G_co.add_node(gene, temperate = 0, count = 0)
+
+        # iterate through all phages
+        for phage in phages:
+            # genes in a specific phage
+            genes = df_genes[df_genes["phage"] == phage][gene_identifier].to_numpy()
+            
+            # temperate of phages (so in the future we can look at temperate dependences)
+            temperate = df_phages[df_phages["phage"]==phage]["temperate"].to_numpy()[0]
+            
+            # for each gene pairs
+            for i in range(len(genes)):
+                G_co.nodes[genes[i]]["temperate"] = G_co.nodes[genes[i]]["temperate"] + (1 if temperate else 0)
+                G_co.nodes[genes[i]]["count"] = G_co.nodes[genes[i]]["count"] + 1
+                # iterate through other genes
+                for j in range(i,len(genes)):
+                    if i != j: # don't have self edges
+                        if G_co.has_edge(genes[i], genes[j]): # if edge exists add wieght
+                            G_co.edges[genes[i],genes[j]]["weight"] = G_co.edges[genes[i],genes[j]]["weight"] + 1
+                        else:
+                            G_co.add_edge(genes[i], genes[j], weight = 1)
+        nx.write_gml(G_co, filepath_occ, stringizer = str)
+        
+        # intialize dep graph
+        G_dep = nx.DiGraph()
+
+        # add all edges
+        for i,j in G_co.edges():
+            # if everytime i is in a genome so is j then i is dependent on j
+            if G_co.edges[i,j]["weight"] == G_co.nodes[i]["count"]: # i is depe
+                G_dep.add_edge(str(i),str(j), weight=G_co.edges[i,j]["weight"])
+            
+            # if everytime j is in a genome so is i then j is dependent on i
+            if G_co.edges[i,j]["weight"] == G_co.nodes[j]["count"]:
+                G_dep.add_edge(str(j), str(i), weight=G_co.edges[i,j]["weight"])
+                
+        # update node attributes
+        for i in G_co.nodes():
+            if G_dep.has_node(i):
+                G_dep.nodes[i]["temperate"] = G_co.nodes[i]["temperate"]
+                G_dep.nodes[i]["count"] = G_co.nodes[i]["count"]
+        nx.write_gml(G_dep, filepath_dep, stringizer = str)
 
 
 ##############################
@@ -235,7 +387,7 @@ def eGFP_DNA():
 
 def collect_gene_info(phage, gp_num):
     """ Collect gene info using phagesdb API """
-    file_path = "data/genes_by_phage/{}_genes.csv".format(phage)
+    file_path = "data/genes_by_phage/{}.csv".format(phage)
 
     if not path.isfile(file_path):
         genes_df = download_phage_genes(phage)

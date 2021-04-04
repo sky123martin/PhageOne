@@ -39,14 +39,13 @@
       <div class="container" style="width: 40%;">
         <h4>BRED Material Generator</h4>
         Input below the edit desired and the assistant will generate primers and the substrate needed to complete the BRED protocol.
-        Try example inputs: 
+        <br><br>Try example inputs: 
         <button class="btn btn-light" onclick="test_replacement();">replacement</button>
         <button class="btn btn-light" onclick="test_insertion();">insertion</button>
         <button class="btn btn-light" onclick="test_deletion();">deletion</button>
         <div id="sample_explain"></div>
         <br><br>
 
-        </form>
         <form action="{{ url_for('BRED') }}" method="post" id = "edit_form">
             {{ edit_form.csrf }}
             <div class="form-group" >
@@ -83,8 +82,8 @@
             </div>
             <div class="form-group", id="form_DNA_template">
                 <label for="template_DNA">Template Sequence</label><br>
-                <textarea form ="edit_form" rows="3" cols="60" id="template_DNA" name="template_DNA"></textarea><br> 
-                <div align="right";> Use enchanced green fluorescent sequence (<a href="https://www.ncbi.nlm.nih.gov/protein/WP_031943942.1?" target="_blank">eGFP</a>)<input name = "EGFP" type="checkbox" id="EGFP_check" onclick="insert_GFP(this);"></div>
+                <textarea style="border: 1px solid rgb(219, 219, 219);width:100%;" form ="edit_form" rows="3" id="template_DNA" name="template_DNA"></textarea><br> 
+                <div align="right";> Use enhanced green fluorescent sequence (<a href="https://www.ncbi.nlm.nih.gov/protein/WP_031943942.1?" target="_blank">eGFP</a>)<input name = "EGFP" type="checkbox" id="EGFP_check" onclick="insert_GFP(this);"></div>
             </div>
 
             <div class="form-group", id="form_orientation">

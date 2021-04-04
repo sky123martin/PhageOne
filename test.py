@@ -194,5 +194,35 @@ class BRED(unittest.TestCase):
         # check that expirement primers do not bind with unedited DNA
         self.assertEqual([0], primer_sets["e start"].unique())
 
+
+    def test_editing_guide_synteny(self):
+        # make a network
+        edgelist = [('1', '4', {'count': 30}), ('1', '2', {'count': 20}), ('2', '3', {'count': 60}), ('3', '4', {'count': 80}), ('2', '4', {'count': 12})]
+
+        test_network = nx.DiGraph(edgelist)
+        test_network.add_nodes_from([
+                                    ('1', {"count": 20}),
+                                    ('2', {"count": 15}),
+                                    ('3', {"count": 2}),
+                                    ('4', {"count": 5})
+                                ])
+
+        
+        # make a fake phage gene list
+        data = [[1, "a", 3], [2, "b", 1], [4, "c", 2]]
+        phage_genes = pd.DataFrame(data, columns = ['pham', 'function', 'gene number'])
+
+        target = {'directed': True, 'multigraph': False, 'graph': {}, 'nodes': [{'count': 20, 'position': 3, 'function': 'a', 'pham': 1, 'id': '1'}, {'count': 5, 'position': 2, 'function': 'c', 'pham': 4, 'id': '4'}, {'count': 15, 'position': 1, 'function': 'b', 'pham': 2, 'id': '2'}], 
+                                                                                'links': [{'count': 30, 'source': '1', 'target': '4'}, {'count': 20, 'source': '1', 'target': '2'}, {'count': 12, 'source': '2', 'target': '4'}]}
+        network = editing_guide_synteny("test", network=test_network, phage_genes=phage_genes)
+
+        self.assertEqual(network, target)
+
+        network = editing_guide_synteny("D29")
+        self.assertEqual(len(network["nodes"])>0,True)
+
+
+
+
 if __name__ == '__main__':
     unittest.main()

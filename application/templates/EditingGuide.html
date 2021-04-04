@@ -8,6 +8,7 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     
+    
   </head>
 <body>
   <br>
@@ -28,6 +29,24 @@
     </li>
 
   </ul>
+
+
+  <div class="container" style="width: 40%;">
+    <br>
+    <form action="{{ url_for('EditingGuide') }}" method="post" id = "form">
+      {{ form.csrf }}
+      <div class="form-group" >
+        <label for="phage">Phage</label>
+        <input type="text" value = "{{phage}}" class="form-control" id="phage" name="phage" placeholder="Enter phage name">
+      </div>
+      {% if error != "" %}
+      <small style="color:red;">{{error}}</small>
+      {% endif %}
+      <br>
+      <button align="right"; type="submit" class="btn btn-primary">Generate Editing Guides</button>
+      {{ form.csrf_token }}
+    </form>
+  </div>
  </div>
  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
