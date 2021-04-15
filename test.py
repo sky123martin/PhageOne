@@ -220,9 +220,31 @@ class BRED(unittest.TestCase):
 
         # network = editing_guide_synteny("D29")
         # self.assertEqual(len(network["nodes"])>0,True)
+    
+    def test_editing_guide_dependency(self):
+               # make a network
+        edgelist = [('1', '4', {'count': 30}), ('1', '2', {'count': 20})]
 
+        test_network = nx.DiGraph(edgelist)
+        test_network.add_nodes_from([
+                                    ('1', {"count": 20}),
+                                    ('2', {"count": 15}),
+                                    ('3', {"count": 2}),
+                                    ('4', {"count": 5})
+                                ])
 
+        
+        # make a fake phage gene list
+        data = [[1, "a", 3], [2, "b", 1], [4, "c", 2],[3, "c", 4]]
+        phage_genes = pd.DataFrame(data, columns = ['pham', 'function', 'gene number'])
 
+        network = editing_guide_dependency("test", network=test_network, phage_genes=phage_genes)
+        
+        target = {'directed': True, 'multigraph': False, 'graph': {}, 'nodes': [{'count': 20, 'position': 3, 'function': 'a', 'pham': 1, 'id': '1'}, {'count': 5, 'position': 2, 'function': 'c', 'pham': 4, 'id': '4'}, {'count': 15, 'position': 1, 'function': 'b', 'pham': 2, 'id': '2'}, {'count': 2, 'position': 4, 'function': 'c', 'pham': 3, 'id': '3'}], 
+                                                                      'links': [{'count': 30, 'source': '1', 'target': '4'}, {'count': 20, 'source': '1', 'target': '2'}]}
+        self.assertEqual(network, target)
+
+        # network = editing_guide_dependency("D29")
 
 if __name__ == '__main__':
     unittest.main()

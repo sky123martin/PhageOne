@@ -10,7 +10,7 @@
     
     
   </head>
-<body onload="createArcDiagram();">
+<body onload="createSyntenyMap();createDependencyMap();createDependencyMatrix();">
   <br>
 
  <div class="container" style="width: 100%;">
@@ -24,9 +24,6 @@
     <li class="nav-item">
       <a class="nav-link" href="{{ url_for('BRED') }}">BRED Material Generator</a>
     </li>
-    <li class="nav-item">
-      <a class="nav-link" href="{{ url_for('GenomeSynteny') }}">Genome Synteny</a>
-    </li>
 
   </ul>
 
@@ -36,9 +33,16 @@
 <h3>Synteny Map</h3>
   <div id = "synteny_viz"></div>
 
+<h3>Dependency Network</h3>
+<div id = "dependency_map_viz"></div>
 <h3>Dependency Matrix</h3>
-<div id = "dependency_viz"></div>
+<select id="dependencySelectButton">
+    <option value="depWeighted" selected>Dependencies by # Genomes (scalar element value)</option>
+    <option value="depBinary">Dependencies (binary element value)</option>
+</select>
+<div id = "dependency_matrix_viz"></div>
  </div>
+
  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <script src="https://d3js.org/d3.v4.js"></script>
  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
@@ -47,7 +51,862 @@
  </body>
 <script> 
 
-function createArcDiagram() {
+function createDependencyMatrix() {
+    // Parse the Data
+    var nodes = {{dependency_nodes| safe }};
+    var edges = {{dependency_edges| safe }};
+
+    var nodeHash = {};
+    nodes.forEach((node) => {
+        nodeHash[node.id] = node;
+        nodeHash[node.id] = node;
+        node.x = parseInt(node.position);
+        node.in_degree = edges.map(function (e){ 
+            if(e.target == node.pham){
+                return e.target
+            }
+                return 0})
+            .filter(function (d) { return d; }).length;
+
+        node.in_degree_weighted = d3.sum(edges.map(function (e){ 
+            if(e.target == node.pham){
+                return e.weight
+            }
+                return 0}));
+    
+        node.out_degree = edges.map(function (e){ 
+            if(e.source == node.pham){
+                return e.source
+            }
+                return 0})
+            .filter(function (d) { return d; }).length;
+        
+        node.out_degree_weighted = d3.sum(edges.map(function (e){ 
+            if(e.source == node.pham){
+                return e.weight
+            }
+                return 0}));
+
+        node.degree_diff = node.out_degree-node.in_degree;
+    })
+    edges.forEach(edge => {
+        edge.count = edge.weight;
+        edge.source_info = nodeHash[edge.source];
+        edge.target_info = nodeHash[edge.target];
+    })
+
+    // set the dimensions and margins of the graph
+    var margin = {top: 30, right: 200, bottom: 200, left: 30},
+    width = 1200 - margin.left - margin.right,
+    height = 1200 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    var svg = d3.select("#dependency_matrix_viz")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+
+    // Labels of row and columns
+    nodes = nodes.sort(function(a,b) { return +a.position - +b.position});
+    var genes = nodes.map(function(d) { return d.pham});
+
+
+    // Build X scales and axis:
+    var x = d3.scaleBand()
+    .range([ 200 , width ])
+    .domain(genes)
+    .padding(0.01);
+    svg.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    // .call(d3.axisBottom(x))
+
+    nodes = nodes.sort(function(a,b) { return -a.position - -b.position});
+    genes = nodes.map(function(d) { return d.pham});
+
+    // Build X scales and axis:
+    var y = d3.scaleBand()
+    .range([ height, 200 ])
+    .domain(genes)
+    .padding(0.01);
+    svg.append("g")
+    // .call(d3.axisLeft(y));
+
+    var myColor = d3.scaleLinear()
+        .range(["white", "black"])
+        .domain([1,d3.max(edges, function(d) { return +d.weight; })])
+
+    var SelectedColorRow = d3.scaleLinear()
+        .range(["#ffcfcf","#4f0000"])
+        .domain([0, d3.max(edges, function(d) { return +d.weight; })])
+
+    var SelectedColorCol = d3.scaleLinear()
+        .range(["#c0f0e4","#004d3a"])
+        .domain([0, d3.max(edges, function(d) { return +d.weight; })])
+
+      // create a tooltip
+    var tooltip = d3.select("#dependency_matrix_viz")
+        .append("div")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+
+    // Three function that change the tooltip when user hover / move / leave a cell
+    var mouseover_edge = function(d) {
+        tooltip
+            .style("opacity", 1)
+            .html("<b>Edge Info</b>: <br> Gene "+d.source_info.position+"gp is dependent on "+d.target_info.position+"gp in "+ d.count+" genomes <br> ")
+            // .attr("x", d3.select(this).attr("x"))
+            // .attr("y", d3.select(this).attr("y"))
+            // .style("left", d3.select(this).attr("y") + "px")
+            // .style("top", d3.select(this).attr("y")+ "px")
+            .style('left', d3.event.pageX + 50 +'px')
+            .style('top', d3.event.pageY - 150+ 'px');
+        elements
+            .style("fill", function(e) {
+                if(e.source==d.source){
+                    return SelectedColorRow(e.weight)
+                }else if(e.target==d.target){
+                    return SelectedColorCol(e.weight)
+                }else{
+                    return myColor(e.weight)
+                }})
+        inbars.style("fill", function(n) {return (n.pham==d.target)? "#4aa891":"lightgrey"})
+        inbarsLabel.style("opacity", function(n) {return (n.pham==d.target)?1:0})
+        outbars.style("fill", function(n) {return (n.pham==d.source)?"#f7adad":"lightgrey"})
+        outbarsLabel.style("opacity", function(n) {return (n.pham==d.source)?1:0})
+        xlabels
+            .style("fill", function(n) {return (n.pham==d.target) ? "black":"lightgrey"})
+            .style("font-size", function(n) {return (n.pham==d.target) ? 15:10})
+        ylabels
+            .style("fill", function(n) {return (n.pham==d.source) ? "black":"lightgrey"})
+            .style("font-size", function(n) {return (n.pham==d.source) ? 15:10})
+    }
+    var mouseleave = function(d) {
+        tooltip.style("opacity", 0)
+        elements.style("fill", function(d) { return myColor(d.weight)} )
+        inbars.style("fill", "black")
+        outbars.style("fill", "black")
+        outbarsLabel.style("opacity",0)
+        inbarsLabel.style("opacity",0)
+        xlabels
+            .style("fill","grey")
+            .style("font-size",10)
+        ylabels
+            .style("fill","grey")
+            .style("font-size",10)
+    }
+    var mouseover_col = function(d) {
+        tooltip
+            .style("opacity", 1)
+            .html("<b>Gene Info</b>: <br> Gene "+d.position+"gp is depended on by " +d.in_degree+" other genes <br> in a total of " +d.in_degree_weighted+" instances <br> Pham: "+d.pham+" <br> Function: "+d.pham+" <br> # genomes: "+d.count)
+            .style('left', d3.event.pageX + 50 +'px')
+            .style('top', d3.event.pageY - 150+ 'px');
+        elements.style("fill", function(e) {return (e.target==d.pham)? SelectedColorCol(e.weight):myColor(e.weight)})
+        inbars.style("fill", function(n) {return (n.pham==d.pham)?"#4aa891":"lightgrey"})
+        inbarsLabel.style("opacity", function(n) {return (n.pham==d.pham)?1:0})
+        xlabels
+            .style("fill", function(n) {return (n.pham==d.pham) ? "black":"lightgrey"})
+            .style("font-size", function(n) {return (n.pham==d.pham) ? 15:10})
+        
+    }
+    var mouseover_row = function(d) {
+        tooltip
+            .style("opacity", 1)
+            .html("<b>Gene Info</b>: <br> Gene "+d.position+"gp is dependent on " +d.out_degree+" other genes <br> in a total of " +d.out_degree_weighted+" instances <br> Pham: "+d.pham+" <br> Function: "+d.pham+" <br> # genomes: "+d.count)
+            .style('left', d3.event.pageX + 50 +'px')
+            .style('top', d3.event.pageY - 150+ 'px');
+        elements
+            .style("fill", function(e) { return (e.source==d.pham)? SelectedColorRow(e.weight):myColor(e.weight)} )
+        outbars
+            .style("fill", function(n) {return (n.pham==d.pham)? "#f7adad":"lightgrey"})
+        outbarsLabel
+            .style("opacity", function(n) {return (n.pham==d.pham)? 1:0})
+        ylabels
+            .style("fill", function(n) {return (n.pham==d.pham) ? "black":"lightgrey"})
+            .style("font-size", function(n) {return (n.pham==d.pham) ? 15:10})
+        // var nodesToHighlight = edges.map(function (e) {
+        //      return (e.source == d.pham) ? e.target : 0}).filter(function (n) { return n; });
+
+        // ylabels.filter(function (n) { return nodesToHighlight.includes(n)})
+        //     .style('font-size', 30);
+    }
+
+    var elements = svg.selectAll()
+        .data(edges, function(d) {return d.source+':'+d.target;})
+        .enter()
+        .append("rect")
+        .attr("x", function(d) { return x(d.target) })
+        .attr("y", function(d) { return y(d.source) })
+        .attr("width", x.bandwidth()-0.2)
+        .attr("height", y.bandwidth()-0.2 )
+        .style("fill", function(d) { return myColor(d.weight)} )
+        .on("mouseover", mouseover_edge)
+        .on("mouseleave", mouseleave)
+
+    var barheight = d3.scaleLinear()
+        .range([0,200])
+        .domain([0,d3.max(nodes, function(d) { return (d.in_degree_weighted > d.out_degree_weighted) ? d.in_degree_weighted: d.out_degree_weighted;})])
+
+    var inbars = svg.selectAll()
+        .data(nodes)
+        .enter()
+        .append("rect")
+        .attr("x", function(d) { return x(d.pham) })
+        .attr("y", function(d) { return 200-barheight(d.in_degree_weighted) })
+        .attr("width", x.bandwidth()-0.5 )
+        .attr("height", function(d) { return barheight(d.in_degree_weighted) })
+        .style("fill", "black")
+        .on("mouseover", mouseover_col)
+        .on("mouseleave", mouseleave)
+
+    var inbarsLabel = svg.selectAll()
+        .data(nodes)
+        .enter()
+        .append("text")
+        .text(function(d) { return d.in_degree_weighted })
+        .attr("x", function(d) { return x(d.pham)})
+        .attr("y", function(d) { return 200-1-barheight(d.in_degree_weighted)})
+        .style("text-anchor", "center")
+        .style("opacity", 0)
+        .style("font-size", 14)
+
+    var barwidth = d3.scaleLinear()
+        .range([200,0])
+        .domain([0,d3.max(nodes, function(d) { return (d.in_degree_weighted > d.out_degree_weighted) ? d.in_degree_weighted: d.out_degree_weighted;})])
+
+    var outbars = svg.selectAll()
+        .data(nodes)
+        .enter()
+        .append("rect")
+        .attr("y", function(d) { return x(d.pham) })
+        .attr("x", function(d) {return barwidth(d.out_degree_weighted) })
+        .attr("height", y.bandwidth()-0.5  )
+        .attr("width", function(d) {return 200-barwidth(d.out_degree_weighted) })
+        .style("fill", "black")
+        .on("mouseover", mouseover_row)
+        .on("mouseleave", mouseleave)
+
+    var outbarsLabel = svg.selectAll()
+        .data(nodes)
+        .enter()
+        .append("text")
+        .text(function(d) { return d.out_degree_weighted })
+        .attr("y", function(d) { return y(d.pham)+y.bandwidth()})
+        .attr("x", function(d) { return barwidth(d.out_degree_weighted)-40})
+        .style("text-anchor", "right")
+        .style("opacity", 0)
+        .style("font-size", 14)
+
+    var xlabels = svg.selectAll()
+        .data(nodes)
+        .enter()
+        .append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text(function(d){return (d.function!="NKF") ? d.position+"-"+d.function:d.position} )
+        .style("text-anchor", "left")
+        .attr("transform", function(d){ return( "translate(" + (x(d.pham)) + "," + (height+y.bandwidth()) + ")rotate(65)")})
+        .style("font-size", 10)
+        .style("fill","grey")
+        .on("mouseover", mouseover_col)
+        .on("mouseleave", mouseleave)
+
+
+    var ylabels = svg.selectAll()
+        .data(nodes)
+        .enter()
+        .append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text(function(d){return (d.function!="NKF") ? d.position+"-"+d.function:d.position} )
+        .style("text-anchor", "left")
+        .attr("transform", function(d){ return( "translate(" + (width+x.bandwidth()) + "," + (y(d.pham)+y.bandwidth()) + ")rotate(0)")})
+        .style("font-size", 10)
+        .style("fill","grey")
+        .on("mouseover", mouseover_row)
+        .on("mouseleave", mouseleave)
+
+    svg.append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text("is dependent on")
+        .style("text-anchor", "right")
+        .attr("transform",  "translate(" + (width+x.bandwidth()+160) + "," + (height/2+100) + ")rotate(270)")
+        .style("font-size", 20)
+        .style("fill","black")
+
+    svg.append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text("depended on by")
+        .style("text-anchor", "center")
+        .attr("transform",  "translate(" + (width/2) + "," + (height+y.bandwidth()+160) + ")rotate(0)")
+        .style("font-size", 20)
+        .style("fill","black")
+
+    svg.append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text("column sum")
+        .style("text-anchor", "center")
+        .attr("transform",  "translate(" + (150) + "," + (130) + ")rotate(-90)")
+        .style("font-size", 14)
+        .style("fill","black")
+
+    svg.append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text("row sum")
+        .style("text-anchor", "center")
+        .attr("transform",  "translate(" + (100) + "," + (height+60) + ")rotate(0)")
+        .style("font-size", 14)
+        .style("fill","black")
+
+     
+            //add x and y axis
+       yAxisSide = d3.axisLeft(barwidth).ticks(3);
+       svg.append("g")
+       .attr("class", "side axis")
+            .attr("transform", "translate(0,"+(height+5)+")rotate(-90)")
+            .call(yAxisSide);
+
+        yAxisTop = d3.axisLeft(barwidth).ticks(3);
+        svg.append("g")
+            .attr("class", "top axis")
+            .call(yAxisTop)
+            .attr("transform", "translate(200,0)rotate(0)");
+
+    // A function that update the chart
+    function update(selectedGroup) {
+
+        if(selectedGroup == "depWeighted"){
+                // Build color scale
+            var myColor = d3.scaleLinear()
+            .range(["white", "black"])
+            .domain([1,d3.max(edges, function(d) { return +d.weight; })])
+
+            var SelectedColorRow = d3.scaleLinear()
+            .range(["#ffcfcf","#4f0000"])
+            .domain([0, d3.max(edges, function(d) { return +d.weight; })])
+
+            var SelectedColorCol = d3.scaleLinear()
+            .range(["#c0f0e4","#004d3a"])
+            .domain([0, d3.max(edges, function(d) { return +d.weight; })])
+
+               // Three function that change the tooltip when user hover / move / leave a cell
+    var mouseover_edge = function(d) {
+        tooltip
+            .style("opacity", 1)
+            .html("<b>Edge Info</b>: <br> Gene "+d.source_info.position+"gp is dependent on "+d.target_info.position+"gp in "+ d.count+" genomes <br> "+d.source_info.position+"gp function: "+d.source_info.function+"<br> "+d.target_info.position+"gp function: "+d.target_info.function)
+            .style('left', d3.event.pageX + 50 +'px')
+            .style('top', d3.event.pageY - 150+ 'px');
+        elements
+            .style("fill", function(e) {
+                if(e.source==d.source){
+                    return SelectedColorRow(e.weight)
+                }else if(e.target==d.target){
+                    return SelectedColorCol(e.weight)
+                }else{
+                    return myColor(e.weight)
+                }})
+        inbars.style("fill", function(n) {return (n.pham==d.target)? "#4aa891":"lightgrey"})
+        inbarsLabel.style("opacity", function(n) {return (n.pham==d.target)?1:0})
+        outbars.style("fill", function(n) {return (n.pham==d.source)?"#f7adad":"lightgrey"})
+        outbarsLabel.style("opacity", function(n) {return (n.pham==d.source)?1:0})
+        xlabels
+            .style("fill", function(n) {return (n.pham==d.target) ? "black":"lightgrey"})
+            .style("font-size", function(n) {return (n.pham==d.target) ? 15:10})
+        ylabels
+            .style("fill", function(n) {return (n.pham==d.source) ? "black":"lightgrey"})
+            .style("font-size", function(n) {return (n.pham==d.source) ? 15:10})
+    }
+    var mouseleave = function(d) {
+        tooltip.style("opacity", 0)
+        elements.style("fill", function(d) { return myColor(d.weight)} )
+        inbars.style("fill", "black")
+        outbars.style("fill", "black")
+        outbarsLabel.style("opacity",0)
+        inbarsLabel.style("opacity",0)
+        xlabels
+            .style("fill","grey")
+            .style("font-size",10)
+        ylabels
+            .style("fill","grey")
+            .style("font-size",10)
+    }
+    var mouseover_col = function(d) {
+        tooltip
+            .style("opacity", 1)
+            .html("<b>Gene Info</b>: <br> Gene "+d.position+"gp is depended on by " +d.in_degree+" other genes <br> in a total of " +d.in_degree_weighted+" instances <br> Pham: "+d.pham+" <br> Function: "+d.pham+" <br> # genomes: "+d.count)
+            .style('left', d3.event.pageX + 50 +'px')
+            .style('top', d3.event.pageY - 150+ 'px');
+        elements.style("fill", function(e) {return (e.target==d.pham)? SelectedColorCol(e.weight):myColor(e.weight)})
+        inbars.style("fill", function(n) {return (n.pham==d.pham)?"#4aa891":"lightgrey"})
+        inbarsLabel.style("opacity", function(n) {return (n.pham==d.pham)?1:0})
+        xlabels
+            .style("fill", function(n) {return (n.pham==d.pham) ? "black":"lightgrey"})
+            .style("font-size", function(n) {return (n.pham==d.pham) ? 15:10})
+        
+    }
+    var mouseover_row = function(d) {
+        tooltip
+            .style("opacity", 1)
+            .html("<b>Gene Info</b>: <br> Gene "+d.position+"gp is dependent on " +d.out_degree+" other genes <br> in a total of " +d.out_degree_weighted+" instances <br> Pham: "+d.pham+" <br> Function: "+d.pham+" <br> # genomes: "+d.count)
+            .style('left', d3.event.pageX + 50 +'px')
+            .style('top', d3.event.pageY - 150+ 'px');
+        elements
+            .style("fill", function(e) { return (e.source==d.pham)? SelectedColorRow(e.weight):myColor(e.weight)} )
+        outbars
+            .style("fill", function(n) {return (n.pham==d.pham)? "#f7adad":"lightgrey"})
+        outbarsLabel
+            .style("opacity", function(n) {return (n.pham==d.pham)? 1:0})
+        ylabels
+            .style("fill", function(n) {return (n.pham==d.pham) ? "black":"lightgrey"})
+            .style("font-size", function(n) {return (n.pham==d.pham) ? 15:10})
+        // var nodesToHighlight = edges.map(function (e) {
+        //      return (e.source == d.pham) ? e.target : 0}).filter(function (n) { return n; });
+
+        // ylabels.filter(function (n) { return nodesToHighlight.includes(n)})
+        //     .style('font-size', 30);
+    }
+
+            ylabels
+                .on("mouseover", mouseover_row)
+                .on("mouseleave", mouseleave)
+
+            xlabels
+                .on("mouseover", mouseover_col)
+                .on("mouseleave", mouseleave)
+            elements
+                .transition()
+                .duration(1000)
+                .style("fill", function(d) { return myColor(d.weight)} )
+            elements
+                .on("mouseover", mouseover_edge)
+                .on("mouseleave", mouseleave)
+
+            var barheight = d3.scaleLinear()
+                .range([0,200])
+                .domain([0,d3.max(nodes, function(d) { return (d.in_degree_weighted > d.out_degree_weighted) ? d.in_degree_weighted: d.out_degree_weighted;})])
+
+            inbars
+                .transition()
+                .duration(1000)
+                .attr("x", function(d) { return x(d.pham) })
+                .attr("y", function(d) { return 200-barheight(d.in_degree_weighted) })
+                .attr("height", function(d) { return barheight(d.in_degree_weighted) })
+            inbars
+                .on("mouseover", mouseover_col)
+                .on("mouseleave", mouseleave)
+
+            inbarsLabel
+                .text(function(d) { return d.in_degree_weighted })
+                .attr("x", function(d) { return x(d.pham)})
+                .attr("y", function(d) { return 200-1-barheight(d.in_degree_weighted)})
+
+            var barwidth = d3.scaleLinear()
+                .range([200,0])
+                .domain([0,d3.max(nodes, function(d) { return (d.in_degree_weighted > d.out_degree_weighted) ? d.in_degree_weighted: d.out_degree_weighted;})])
+
+            outbars
+                .transition()
+                .duration(1000)
+                .attr("x", function(d) {return barwidth(d.out_degree_weighted) })
+                .attr("width", function(d) {return 200-barwidth(d.out_degree_weighted) })
+            outbars
+                .on("mouseover", mouseover_row)
+                .on("mouseleave", mouseleave)
+
+            outbarsLabel
+                .text(function(d) { return d.out_degree_weighted})
+                .attr("y", function(d) { return y(d.pham)+y.bandwidth()})
+                .attr("x", function(d) { return barwidth(d.out_degree_weighted)-40})
+
+            //add x and y axis
+            yAxisSide = d3.axisLeft(barwidth).ticks(3);
+            yAxisTop = d3.axisLeft(barwidth).ticks(3);
+
+            svg.selectAll("g .top.axis")
+                .call(yAxisTop)
+
+            svg.selectAll("g .side.axis")
+                .call(yAxisSide);
+
+        }else{
+
+            // Build color scale
+            var myColor = d3.scaleLinear()
+            .range(["white", "black"])
+            .domain([1,d3.max(edges, function(d) { return +d.weight; })])
+
+            var SelectedColorRow = d3.scaleLinear()
+            .range(["#ffcfcf","#4f0000"])
+            .domain([0, d3.max(edges, function(d) { return +d.weight; })])
+
+            var SelectedColorCol = d3.scaleLinear()
+            .range(["#c0f0e4","#004d3a"])
+            .domain([0, d3.max(edges, function(d) { return +d.weight; })])
+
+            var mouseover_edge = function(d) {
+                tooltip
+                    .style("opacity", 1)
+                    .html("<b>Edge Info</b>: <br> Gene "+d.source_info.position+"gp is dependent on "+d.target_info.position+"gp in "+ d.count+" genomes <br> ")
+                    .style('left', d3.event.pageX + 50 +'px')
+                    .style('top', d3.event.pageY - 150+ 'px');
+                elements
+                    .style("fill", function(e) {
+                        if (e.source==d.source){
+                            return "#f7adad"
+                        }else if (e.target==d.target){
+                            return "#4aa891"
+                        }else{
+                            return "#585858"
+                        }})
+                inbars.style("fill", function(n) {return (n.pham==d.target)? "#4aa891":"lightgrey"})
+                inbarsLabel.style("opacity", function(n) {return (n.pham==d.target)?1:0})
+                outbars.style("fill", function(n) {return (n.pham==d.source)?"#f7adad":"lightgrey"})
+                outbarsLabel.style("opacity", function(n) {return (n.pham==d.source)?1:0})
+                xlabels
+                    .style("fill", function(n) {return (n.pham==d.target) ? "black":"lightgrey"})
+                    .style("font-size", function(n) {return (n.pham==d.target) ? 15:10})
+                ylabels
+                    .style("fill", function(n) {return (n.pham==d.source) ? "black":"lightgrey"})
+                    .style("font-size", function(n) {return (n.pham==d.source) ? 15:10})
+            }
+            var mouseleave = function(d) {
+                tooltip.style("opacity", 0)
+                elements.style("fill", "#585858")
+                inbars.style("fill", "black")
+                outbars.style("fill", "black")
+                outbarsLabel.style("opacity",0)
+                inbarsLabel.style("opacity",0)
+                xlabels
+                    .style("fill","grey")
+                    .style("font-size",10)
+                ylabels
+                    .style("fill","grey")
+                    .style("font-size",10)
+            }
+            var mouseover_col = function(d) {
+                tooltip
+                    .style("opacity", 1)
+                    .html("<b>Gene Info</b>: <br> Gene "+d.position+"gp is depended on by " +d.in_degree+" other genes <br> Pham: "+d.pham+" <br> Function: "+d.pham+" <br> # genomes: "+d.count)
+                    .style('left', d3.event.pageX + 50 +'px')
+                    .style('top', d3.event.pageY - 150+ 'px');
+                elements.style("fill", function(e) {return (e.target==d.pham)? "#4aa891":"#585858"})
+                inbars.style("fill", function(n) {return (n.pham==d.pham)?"#4aa891":"lightgrey"})
+                inbarsLabel.style("opacity", function(n) {return (n.pham==d.pham)?1:0})
+                xlabels
+                    .style("fill", function(n) {return (n.pham==d.pham) ? "black":"lightgrey"})
+                    .style("font-size", function(n) {return (n.pham==d.pham) ? 15:10})
+                
+            }
+            var mouseover_row = function(d) {
+                tooltip
+                    .style("opacity", 1)
+                    .html("<b>Gene Info</b>: <br> Gene "+d.position+"gp is dependent on " +d.in_degree+" other genes <br> Pham: "+d.pham+" <br> Function: "+d.pham+" <br> # genomes: "+d.count)
+                    .style('left', d3.event.pageX + 50 +'px')
+                    .style('top', d3.event.pageY - 150+ 'px');
+                elements
+                    .style("fill", function(e) { return (e.source==d.pham)? "#f7adad":"#585858"} )
+                outbars
+                    .style("fill", function(n) {return (n.pham==d.pham)? "#f7adad":"lightgrey"})
+                outbarsLabel
+                    .style("opacity", function(n) {return (n.pham==d.pham)? 1:0})
+                ylabels
+                    .style("fill", function(n) {return (n.pham==d.pham) ? "black":"lightgrey"})
+                    .style("font-size", function(n) {return (n.pham==d.pham) ? 15:10})
+            }
+            ylabels
+                .on("mouseover", mouseover_row)
+                .on("mouseleave", mouseleave)
+
+            xlabels
+                .on("mouseover", mouseover_col)
+                .on("mouseleave", mouseleave)
+
+            elements
+                .transition()
+                .duration(1000)
+                .style("fill", "#585858")
+            elements
+                .on("mouseover", mouseover_edge)
+                .on("mouseleave", mouseleave)
+
+            var barheight = d3.scaleLinear()
+                .range([0,200])
+                .domain([0,d3.max(nodes, function(d) { return (d.in_degree > d.out_degree) ? d.in_degree: d.out_degree;})])
+
+            inbars
+                .transition()
+                .duration(1000)
+                .attr("x", function(d) { return x(d.pham) })
+                .attr("y", function(d) { return 200-barheight(d.in_degree) })
+                .attr("height", function(d) { return barheight(d.in_degree) })
+            inbars
+                .on("mouseover", mouseover_col)
+                .on("mouseleave", mouseleave)
+
+            inbarsLabel
+                .text(function(d) { return d.in_degree })
+                .attr("x", function(d) { return x(d.pham)})
+                .attr("y", function(d) { return 200-1-barheight(d.in_degree)})
+
+            var barwidth = d3.scaleLinear()
+                .range([200,0])
+                .domain([0,d3.max(nodes, function(d) { return (d.in_degree > d.out_degree) ? d.in_degree: d.out_degree;})])
+
+            outbars
+                .transition()
+                .duration(1000)
+                .attr("x", function(d) {return barwidth(d.out_degree) })
+                .attr("width", function(d) {return 200-barwidth(d.out_degree) })
+            outbars
+                .on("mouseover", mouseover_row)
+                .on("mouseleave", mouseleave)
+
+            outbarsLabel
+                .text(function(d) { return d.out_degree })
+                .attr("y", function(d) { return y(d.pham)+y.bandwidth()})
+                .attr("x", function(d) { return barwidth(d.out_degree)-20})
+            
+            //add x and y axis
+            yAxisSide = d3.axisLeft(barwidth).ticks(3);
+            yAxisTop = d3.axisLeft(barwidth).ticks(3);
+
+            svg.selectAll("g .top.axis")
+                .call(yAxisTop)
+
+            svg.selectAll("g .side.axis")
+                .call(yAxisSide);
+        }
+
+    }
+
+    // When the button is changed, run the updateChart function
+    d3.select("#dependencySelectButton").on("change", function(d) {
+    // recover the option that has been chosen
+    var selectedOption = d3.select(this).property("value")
+    // run the updateChart function with this selected option
+    update(selectedOption)
+    })
+
+
+}
+function createDependencyMap() {
+    // Parse the Data
+    var nodes = {{dependency_nodes| safe }};
+    var edges = {{dependency_edges| safe }};
+
+    var nodeHash = {};
+    nodes.forEach((node) => {
+        nodeHash[node.id] = node;
+        node.x = parseInt(node.position);
+        node.in_degree = edges.map(function (e){ 
+            if(e.target == node.pham){
+                return e.target
+            }
+                return 0})
+            .filter(function (d) { return d; }).length;
+    
+        node.out_degree = edges.map(function (e){ 
+            if(e.source == node.pham){
+                return e.source
+            }
+                return 0})
+            .filter(function (d) { return d; }).length;
+        node.degree_diff = node.out_degree-node.in_degree;
+    })
+    edges.forEach(edge => {
+        edge.count = edge.weight;
+        edge.weight = parseInt(edge.weight);
+        edge.source = nodeHash[edge.source];
+        edge.target = nodeHash[edge.target];
+    })
+
+   var margin = {top: 20, right: 20, bottom: 20, left: 0},
+    width = nodes.length*51 - margin.left - margin.right,
+    height = nodes.length*15 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    var arcG = d3.select("#dependency_map_viz")
+        .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+            .attr("transform",
+                "translate(" + margin.left + "," + margin.top + ")");
+
+    // List of node names
+    var positions = nodes.map(function(d){return d.position})
+
+    // A linear scale to position the nodes on the X axis
+    var x = d3.scaleLinear()
+        .range([0, width])
+        .domain([0, d3.max(nodes, function(d) { return +d.position;} )])
+
+    var nsize = d3.scaleLinear()//.scaleSqrt()
+        .range([5, 16])
+        .domain([1,d3.max(nodes, function(d) { return +d.count;} )])
+
+    var esize = d3.scaleLinear()
+        .range([0.5,20])
+        .domain([1,d3.max(edges, function(d) { return d.count;} )])
+
+    var archeight = d3.scaleLinear()
+        .range([1,height*3/4])
+        .domain([1, d3.max(nodes, function(d) { return +d.position;} )])
+
+    var degreecolor = d3.scaleLinear()
+        .range([0, 255])
+        .domain([d3.min(nodes, function(d) { return +d.degree_diff;} ), d3.max(nodes, function(d) { return +d.degree_diff;} )]);
+
+
+    var xaxis = height/2+10;
+
+          // create a tooltip
+    var Tooltip = d3.select("#dependency_map_viz")
+        .append("div")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+        .style("width",  220)
+
+    var edgewidth = d3.scaleLinear()
+        .range([0, 10])
+        .domain([1, d3.max(edges, function(e) { return e.weight;} )]);
+
+    var mylinks = arcG.selectAll("path")
+                            .data(edges)
+                            .enter()
+                            .append("path")
+                            .attr("class", "arc")
+                            .style("fill", "none")
+                            .style("stroke", "grey")
+                            .style("stroke-width", function(e){ return edgewidth(e.weight)})
+                            .style("opacity", 0.1)
+                            .attr("d", arc)
+
+    var diff_min = d3.min(nodes, function(d) { return +d.degree_diff;} )
+    var diff_max = d3.max(nodes, function(d) { return +d.degree_diff;} )
+    var color = d3.scaleLinear()
+        .range(["#69b3a2","#ff6666"])
+        .domain([-1, 1]);
+
+    var mynodes = arcG.selectAll("circle")
+                    .data(nodes)
+                    .enter()
+                    .append("circle")
+                    .attr("class", "node")
+                    .attr("r", function(d){ return(nsize(d.count))})
+                    .attr("cy", xaxis)
+                    .attr("cx", function(d){ return(x(d.position))})
+                    //.style('fill', function(d){ return d3.rgb(degreecolor(d.degree_diff), degreecolor(d.degree_diff), degreecolor(d.degree_diff))})
+                    .style('fill', function(d){ return color((d.degree_diff>0)?d.degree_diff/diff_max:-d.degree_diff/diff_min)})
+                    .style('opacity', "1")
+                            
+
+      // And give them a label
+    var mylabels = arcG
+        .selectAll("mylabels")
+        .data(nodes)
+        .enter()
+        .append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text(function(d){
+            if(d.function=="NKF"){
+                return ""
+            }
+            return(d.function)} )
+        .style("text-anchor", "end")
+        .attr("transform", function(d){ return( "translate(" + (x(d.position)) + "," + (xaxis+20) + ")rotate(-45)")})
+        .style("font-size", 14)
+
+    var gplabels = arcG
+        .selectAll("gplabels")
+        .data(nodes)
+        .enter()
+        .append("text")
+        .attr("x", 0)
+        .attr("y", 0)
+        .text(function(d){return d.position} )
+        .style("text-anchor", "middle")
+        .attr("transform", function(d){ return( "translate(" + (x(d.position)) + "," + (xaxis+2) + ")rotate(0)")})
+        .style("font-size", function(d){return 6+nsize(d.count)/3} )
+        .style("fill","white")
+        
+
+    mynodes
+    .on('mouseover', function (d) {
+      // Highlight the nodes: every node is green except of him
+        mynodes
+            .style('fill', 'lightgrey')
+            d3.select(this)
+            .style('fill', function(d){ return color((d.degree_diff>0)?d.degree_diff/diff_max:-d.degree_diff/diff_min)})
+
+        var nodesToHighlight = edges.map(function (e) { return e.source === d ? e.target : e.target === d ? e.source : 0}).filter(function (d) { return d; });
+        mynodes.filter(function (d) { return nodesToHighlight.indexOf(d) >= 0; })
+            .style('fill', function(d){ return color((d.degree_diff>0)?d.degree_diff/diff_max:-d.degree_diff/diff_min)})
+        // Highlight the connections
+        mylinks
+            .style('stroke', function (link_d) {
+                if (link_d.target.id === d.id){
+                    return "#69b3a2"
+                }else if(link_d.source.id === d.id){
+                    return "#ff6666"
+                }else{
+                    return 'lightgrey'}})
+            .style('stroke-opacity', function (link_d) {return link_d.source.id === d.id || link_d.target.id === d.id? 1 : 0.1;})
+        Tooltip
+            .style("opacity", 1)
+            .html("<b>Node Info</b> <br>Gene Product #"+d.position+"<br> Pham: "+d.pham+"<br> Annotated Function: " + d.function +"<br> # Genomes: " + d.count+"<br> Dependent on # genes: " + d.out_degree+"<br> Depended on # genes: " + d.in_degree)
+            .style("left", (d3.mouse(this)[0]+200) + "px")
+            .style("top", (d3.mouse(this)[1]+700) + "px")
+
+
+    //   labels
+    //     .style("font-size", function(label_d){ return label_d.name === d.name ? 16 : 2 } )
+    //     .attr("y", function(label_d){ return label_d.name === d.name ? 10 : 0 } )
+
+    })
+    .on('mouseout', function (d) {
+        mynodes.style('fill', function(d){ return color((d.degree_diff>0)?d.degree_diff/diff_max:-d.degree_diff/diff_min)})
+        mylinks
+            .style("fill", "none")
+            .style("stroke", "grey")
+            .style("stroke-opacity", 0.5)
+        Tooltip
+            .style("opacity", 0)
+
+    })
+
+
+   function arc(d) {
+     var draw = d3.line().curve(d3.curveBasis)
+     var sx = x(d.source.position)
+     var tx = x(d.target.position)
+     var midX = (sx + tx) / 2
+     var midY = ((xaxis)+archeight(d.source.position - d.target.position))
+    //  if((d.target.position-d.source.position)==1){
+    //      midY = height-30
+    //  }
+     return draw([[sx,xaxis],[midX,midY],[tx,xaxis]])
+    }
+ }
+
+function createSyntenyMap() {
     // Parse the Data
     var nodes = {{synteny_nodes| safe }};
     var edges = {{synteny_edges| safe }};
@@ -64,7 +923,7 @@ function createArcDiagram() {
         edge.target = nodeHash[edge.target];
     })
 
-   var margin = {top: 20, right: 20, bottom: 20, left: 20},
+   var margin = {top: 20, right: 20, bottom: 20, left: 0},
     width = nodes.length*51 - margin.left - margin.right,
     height = nodes.length*9 - margin.top - margin.bottom;
 
@@ -90,11 +949,11 @@ function createArcDiagram() {
         .domain([1,d3.max(nodes, function(d) { return +d.count;} )])
 
     var esize = d3.scaleLinear()
-        .range([0.5,20])
+        .range([3,25])
         .domain([1,d3.max(edges, function(d) { return d.count;} )])
 
     var archeight = d3.scaleLinear()
-        .range([1,height+100])
+        .range([0,height+150])
         .domain([1, d3.max(nodes, function(d) { return +d.position;} )])
 
 
@@ -112,6 +971,7 @@ function createArcDiagram() {
         .style("padding", "5px")
         .style("width",  220)
 
+    var colorsUD = ["#DBB221","#1B90B7"]
     var mylinks = arcG.selectAll("path")
                             .data(edges)
                             .enter()
@@ -149,7 +1009,7 @@ function createArcDiagram() {
             return(d.function)} )
         .style("text-anchor", "end")
         .attr("transform", function(d){ return( "translate(" + (x(d.position)) + "," + (xaxis+20) + ")rotate(-45)")})
-        .style("font-size", 8)
+        .style("font-size", 14)
 
     var gplabels = arcG
         .selectAll("gplabels")
@@ -193,7 +1053,14 @@ function createArcDiagram() {
     mylinks
     .on('mouseover', function (d) {
         mynodes
-            .style('fill', function (node_d) { return d.source.id === node_d.id || d.target.id === node_d.id? "#69b3a2" : 'lightgrey';})
+            .style('fill', function (node_d) {
+                if (d.source.id === node_d.id){
+                    return colorsUD[0]
+                }else if(d.target.id === node_d.id){
+                    return colorsUD[1]
+                }else{
+                    return 'lightgrey'
+                }})
         probabiltylabels 
             .style('opacity', function (link_d) {return link_d.source.id === d.source.id & link_d.target.id === d.target.id? 1 : 0;})
         Tooltip
@@ -230,7 +1097,14 @@ function createArcDiagram() {
             .style('fill', '#555');
         // Highlight the connections
         mylinks
-            .style('stroke', function (link_d) { return link_d.source.id === d.id || link_d.target.id === d.id? "#69b3a2" : 'lightgrey';})
+            .style('stroke', function (link_d) {
+                if(link_d.source.id === d.id){
+                    return colorsUD[0]
+                }else if(link_d.target.id === d.id){
+                    return colorsUD[1]
+                }else{
+                    return 'lightgrey'
+                }})
             .style('stroke-opacity', function (link_d) {return link_d.source.id === d.id || link_d.target.id === d.id? 1 : 0.5;})
         probabiltylabels 
             .style('opacity', function (link_d) {return link_d.source.id === d.id || link_d.target.id === d.id? 1 : 0;})

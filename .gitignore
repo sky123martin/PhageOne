@@ -2,7 +2,14 @@ research_notebooks/data/*
 research_notebooks/.ipynb_checkpoints/*
 research_notebooks/networks/*
 application/__pycache__/
-data/*
+data/fasta_files/*
+data/cleaned_gene_list.csv
+data/cleaned_gene_list.csv
+data/networks/dependency___
+data/networks/synteny___
+data/genes_by_phage/*
+data/
+
 output/*
 
 # Byte-compiled / optimized / DLL files

@@ -29,6 +29,7 @@ class PrimerNotFound(Error):
 
 def setup_data():
     # make data directory
+    app.logger.info("make directories")
     proc = subprocess.check_call("mkdir -p data", shell=True)
     proc = subprocess.check_call("mkdir -p data/fasta_files", shell=True)
     proc = subprocess.check_call("mkdir -p data/genes_by_phage", shell=True)
@@ -250,25 +251,47 @@ def eGFP_DNA():
 #### Editing Guides #####
 #########################
 def editing_guide_synteny(phage, network=None, phage_genes=None):
-    if network==None:
-        network = nx.read_gml("data/networks/synteny___")
+    filepath = "data/networks/{}_synteny".format(phage)
+    if not path.isfile(filepath):
+        if network==None:
+            network = nx.read_gml("data/networks/synteny___")
 
-    if not isinstance(phage_genes, pd.DataFrame):
-        phage_genes = pd.read_csv("data/genes_by_phage/{}.csv".format(phage))
+        if not isinstance(phage_genes, pd.DataFrame):
+            phage_genes = pd.read_csv("data/genes_by_phage/{}.csv".format(phage))
 
-    phage_network = network.subgraph([str(i) for i in phage_genes["pham"].unique()])
-    for _, row in phage_genes.iterrows():
-        phage_network.nodes[str(row["pham"])]["position"] = row["gene number"]
-        phage_network.nodes[str(row["pham"])]["function"] = row["function"]
-        phage_network.nodes[str(row["pham"])]["pham"] = row["pham"]
+        phage_network = network.subgraph([str(i) for i in phage_genes["pham"].unique()])
+        for _, row in phage_genes.iterrows():
+            phage_network.nodes[str(row["pham"])]["position"] = row["gene number"]
+            phage_network.nodes[str(row["pham"])]["function"] = row["function"]
+            phage_network.nodes[str(row["pham"])]["pham"] = row["pham"]
 
+        nx.write_gml(phage_network, filepath, stringizer = str)
+    else:
+        phage_network = nx.read_gml(filepath)
     return nx.node_link_data(phage_network)
 
-def dependency_editing_guide(phage, temperate="", cluster="", morphotype=""):
-    pass
+def editing_guide_dependency(phage, network=None, phage_genes=None):
+    filepath = "data/networks/{}_dependency".format(phage)
+    if not path.isfile(filepath):
+        if network==None:
+            network = nx.read_gml("data/networks/dependency___")
 
-def morphotype_editing_guide(phage, temperate="", cluster="", morphotype=""):
-    pass
+        if not isinstance(phage_genes, pd.DataFrame):
+            phage_genes = pd.read_csv("data/genes_by_phage/{}.csv".format(phage))
+
+        print("Finished reading in")
+        phage_network = network.subgraph([str(i) for i in phage_genes["pham"].unique()])
+        print("made sub")
+        for _, row in phage_genes.iterrows():
+            phage_network.nodes[str(row["pham"])]["position"] = row["gene number"]
+            phage_network.nodes[str(row["pham"])]["function"] = row["function"]
+            phage_network.nodes[str(row["pham"])]["pham"] = row["pham"]
+
+        nx.write_gml( phage_network, filepath, stringizer = str)
+    else:
+        phage_network = nx.read_gml(filepath)
+    
+    return nx.node_link_data(phage_network)
 
 ############################
 #### Generate Networks #####
@@ -325,8 +348,7 @@ def generate_synteny_network(temperate="", cluster="", morphotype=""):
 def generate_dependency_network(temperate="", cluster="", morphotype=""):
     """ Create a synteny network given a subset of phages by cluster or morphology, node weight is number of apperances and edge weight is p i->j """
     filepath_dep = "data/networks/dependency_{}_{}_{}".format(temperate, cluster, morphotype)
-    filepath_occ = "data/networks/co_occurrence_{}_{}_{}".format(temperate, cluster, morphotype)
-    if not path.isfile(filepath_dep) or not path.isfile(filepath_occ):
+    if not path.isfile(filepath_dep):
         df_phages = pd.read_csv("data/phage_metadata.csv")
         df_genes = pd.read_csv("data/cleaned_gene_list.csv")
         gene_identifier = "pham"
@@ -349,7 +371,7 @@ def generate_dependency_network(temperate="", cluster="", morphotype=""):
             
             # for each gene pairs
             for i in range(len(genes)):
-                G_co.nodes[genes[i]]["temperate"] = G_co.nodes[genes[i]]["temperate"] + (1 if temperate else 0)
+                # G_co.nodes[genes[i]]["temperate"] = G_co.nodes[genes[i]]["temperate"] + (1 if temperate else 0)
                 G_co.nodes[genes[i]]["count"] = G_co.nodes[genes[i]]["count"] + 1
                 # iterate through other genes
                 for j in range(i,len(genes)):
@@ -358,26 +380,25 @@ def generate_dependency_network(temperate="", cluster="", morphotype=""):
                             G_co.edges[genes[i],genes[j]]["weight"] = G_co.edges[genes[i],genes[j]]["weight"] + 1
                         else:
                             G_co.add_edge(genes[i], genes[j], weight = 1)
-        nx.write_gml(G_co, filepath_occ, stringizer = str)
         
         # intialize dep graph
         G_dep = nx.DiGraph()
+        G_dep.add_nodes_from(G_co)
 
         # add all edges
         for i,j in G_co.edges():
             # if everytime i is in a genome so is j then i is dependent on j
-            if G_co.edges[i,j]["weight"] == G_co.nodes[i]["count"]: # i is depe
-                G_dep.add_edge(str(i),str(j), weight=G_co.edges[i,j]["weight"])
+            if G_co.edges[i,j]["weight"] == G_co.nodes[i]["count"]: # i->j
+                G_dep.add_edge(i,j, weight=G_co.edges[i,j]["weight"])
             
             # if everytime j is in a genome so is i then j is dependent on i
             if G_co.edges[i,j]["weight"] == G_co.nodes[j]["count"]:
-                G_dep.add_edge(str(j), str(i), weight=G_co.edges[i,j]["weight"])
+                G_dep.add_edge(j,i, weight=G_co.edges[i,j]["weight"])
                 
         # update node attributes
-        for i in G_co.nodes():
-            if G_dep.has_node(i):
-                G_dep.nodes[i]["temperate"] = G_co.nodes[i]["temperate"]
-                G_dep.nodes[i]["count"] = G_co.nodes[i]["count"]
+        for i in G_dep.nodes():
+            # G_dep.nodes[i]["temperate"] = G_co.nodes[i]["temperate"]
+            G_dep.nodes[i]["count"] = G_co.nodes[i]["count"]
         nx.write_gml(G_dep, filepath_dep, stringizer = str)
 
 
@@ -655,7 +676,7 @@ def find_amplicon(DNA, forward_primer, reverse_primer):
 
     return amplicon
 
-def find_editing_substrate(DNA, bp_position_start, bp_position_stop, template_DNA = None, homo_length = app.config["HOMOLOGOUS_LENGTH"]):
+def find_editing_substrate(DNA, bp_position_start, bp_position_stop, template_DNA = None, orientation=None, homo_length = app.config["HOMOLOGOUS_LENGTH"]):
     """ Find DNA sequence for editing substrate this includes homologous arms
     
     Insertion:
@@ -669,7 +690,7 @@ def find_editing_substrate(DNA, bp_position_start, bp_position_stop, template_DN
             return
                 abcdxyzefghi
 
-    Swap:
+    replacement:
         ex. 
             params
                 DNA = abcdefghi
@@ -692,12 +713,16 @@ def find_editing_substrate(DNA, bp_position_start, bp_position_stop, template_DN
                 bcgh
 
     """
+    print(orientation,orientation,orientation)
+    if orientation == "R":
+        template_DNA = reverse(complement(template_DNA))
     template_DNA = ("" if template_DNA == None else template_DNA)
+
     if bp_position_stop == bp_position_start: # for insertion
         homo_pre = DNA[bp_position_start-homo_length:bp_position_start]
         homo_post = DNA[bp_position_stop:bp_position_stop+homo_length]
         edited_DNA = DNA[:bp_position_start] + template_DNA + DNA[bp_position_stop:]
-    else: # for swap or deletion
+    else: # for replacement or deletion
         homo_pre = DNA[bp_position_start-homo_length-1:bp_position_start-1]
         homo_post = DNA[bp_position_stop:bp_position_stop+homo_length]
         edited_DNA = DNA[:bp_position_start-1] + template_DNA + DNA[bp_position_stop:]

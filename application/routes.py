@@ -122,17 +122,20 @@ def BRED(error=""):
         if template_DNA.replace("A","").replace("T","").replace("G","").replace("C","") != "":
             return BRED("Unknown character found in input template DNA")
 
+        elif orientation=="same":
+            orientation = results["region orientation"]
+
         # Check if deletion
-        if edit_type != "deletion" and orientation=="":
-            error = "orientation not specified"
-        elif orientation=="R" or (orientation=="Same" and results["region orientation"]=="R"):
-            template_DNA = reverse(complement(template_DNA))
+        # if edit_type != "deletion" and orientation=="":
+        #     error = "orientation not specified"
+        # elif orientation=="R" or (orientation=="Same" and results["region orientation"]=="R"):
+        #     template_DNA = reverse(complement(template_DNA))
 
         # retrieve phage DNA
         DNA = fasta_to_DNA(phage)
 
         # find substrate and edit DNA sequence
-        substrate, edited_DNA = find_editing_substrate(DNA, bp_position_start, bp_position_stop, template_DNA)
+        substrate, edited_DNA = find_editing_substrate(DNA, bp_position_start, bp_position_stop, template_DNA, orientation)
 
         # find primers
         results["ID"] = process_id = str(random.randint(0,sys.maxsize))
@@ -177,12 +180,8 @@ def EditingGuide(error = ""):
 
 @app.route('/EditingGuide/<phage>', methods=['GET', 'POST'])
 def EditingGuideResults(phage):
-    print(phage)
-    network = editing_guide_synteny(phage)
-    return render_template("EditingGuidesResults.html", phage=phage,synteny_edges=network["links"], synteny_nodes=network["nodes"])
+    synteny_network = editing_guide_synteny(phage)
+    dependency_network = editing_guide_dependency(phage)
+    return render_template("EditingGuidesResults.html", phage=phage, synteny_edges=synteny_network["links"], synteny_nodes=synteny_network["nodes"], dependency_nodes=dependency_network["nodes"], dependency_edges=dependency_network["links"])
 
-@app.route('/GenomeSynteny', methods=['GET', 'POST'])
-def GenomeSynteny(error = ""):
-        print(error)
-        return render_template("GenomeSynteny.html", error=error)
 
